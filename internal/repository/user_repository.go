@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"time"
+	"umkm-odod/internal/dto"
 	"umkm-odod/internal/model"
 
 	"gorm.io/gorm"
@@ -10,8 +11,8 @@ import (
 
 // interface
 type UserRepository interface {
-	GetAllUsers(ctx context.Context) ([]model.User, error)                                        // method untuk super admin bisa lihat semua user dari semua tenant
-	GetUsersByTenant(ctx context.Context, tenantID string, username string) ([]model.User, error) // admin n owner hanya boleh lihat user dari tenant sendiri, jadi harus tenant isolation
+	GetAllUsers(ctx context.Context) ([]model.User, error)                                                         // method untuk super admin bisa lihat semua user dari semua tenant
+	GetUsersByTenant(ctx context.Context, tenantID string, req dto.PaginationRequest) ([]model.User, int64, error) // admin n owner hanya boleh lihat user dari tenant sendiri, jadi harus tenant isolation
 	GetUserByID(ctx context.Context, tenantID string, id string) (*model.User, error)
 	GetUserByUsername(ctx context.Context, username string) (*model.User, error) // untuk login user
 	CreateUser(ctx context.Context, user *model.User) error
@@ -48,24 +49,40 @@ func (r *userRepository) GetAllUsers(ctx context.Context) ([]model.User, error) 
 	return users, nil
 }
 
-func (r *userRepository) GetUsersByTenant(ctx context.Context, tenantID string, username string) ([]model.User, error) {
+func (r *userRepository) GetUsersByTenant(ctx context.Context, tenantID string, req dto.PaginationRequest) ([]model.User, int64, error) {
 	var users []model.User
+	var total int64 // untuk return value total data
 
 	// query standar
-	query := r.db.WithContext(ctx).Preload("Role").Preload("Tenant").Where("tenant_id = ?", tenantID)
+	query := r.db.WithContext(ctx).Model(&model.User{}).Preload("Role").Preload("Tenant").Where("tenant_id = ?", tenantID)
 
-	if username != "" {
-		query = query.Where("username LIKE ?", "%"+username+"%")
+	if req.Search != "" {
+		query = query.Where("username LIKE ? OR full_name LIKE ?", "%"+req.Search+"%", "%"+req.Search+"%")
 	}
 
-	// search ke db
-	err := query.Find(&users).Error
+	// hitung jumlah data sebelum pagination
+	err := query.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Sorting (sementara, nanti kita whitelist)
+	query = query.Order(req.Sort + " " + req.Order)
+
+	// Pagination
+	offset := (req.Page - 1) * req.Limit
+
+	// Limit + find data
+	err = query.
+		Offset(offset).
+		Limit(req.Limit).
+		Find(&users).Error // sudah sekalian find data disini
 
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return users, nil
+	return users, total, nil
 }
 
 func (r *userRepository) GetUserByID(ctx context.Context, tenantID string, id string) (*model.User, error) {
@@ -112,7 +129,10 @@ func (r *userRepository) UpdateProfile(ctx context.Context, user *model.User) er
 }
 
 func (r *userRepository) ChangePassword(ctx context.Context, user *model.User) error {
-	return r.db.WithContext(ctx).Save(user).Error
+	// jangan pakai .Save() karena akan menyebabkan error. GORM akan berusaha update semua field pada struct relasi juga soalnya
+	// untuk update password cukup pakai Update("nama_field", "value")
+	err := r.db.WithContext(ctx).Model(model.User{}).Where("id = ?", user.ID).Update("password", user.Password).Error
+	return err
 }
 
 func (r *userRepository) UpdateLastLoginAt(ctx context.Context, userID string) error {

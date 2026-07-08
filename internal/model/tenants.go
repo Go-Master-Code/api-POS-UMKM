@@ -11,6 +11,8 @@ type Tenant struct {
 	Name                string               `json:"name" gorm:"type:varchar(150);not null"`
 	Phone               string               `json:"phone" gorm:"type:varchar(30);not null"`
 	Address             string               `json:"address" gorm:"type:text;not null"`
+	TaxPercentage       float64              `json:"tax_percentage" gorm:"type:decimal(5,2);not null"`
+	ReceiptFooter       string               `json:"receipt_footer" gorm:"type:text"`
 	CatalogCategories   []CatalogCategory    `json:"-"` // reverse relation 1 to many (1 tenant bisa punya banyak catalog categories)
 	CatalogItems        []CatalogItem        `json:"-"`
 	ItemAttributes      []ItemAttribute      `json:"-"`

@@ -133,12 +133,14 @@ func (r *reportRepository) GetStockReport(ctx context.Context, tenantID string, 
 
 	// query untuk select data
 	err = baseQuery.Select(`item_variants.id AS item_variant_id,
+			catalog_categories.name AS category_name,
 			catalog_items.name AS item_name,
 			item_variants.variant_name AS variant_name,
 			item_variants.sku AS sku,
 			item_variants.minimum_stock AS minimum_stock,
 			COALESCE(sum(stock_movements.qty),0) AS current_stock`).
 		Joins("LEFT JOIN catalog_items ON catalog_items.id = item_variants.item_id").
+		Joins("LEFT JOIN catalog_categories ON catalog_items.category_id = catalog_categories.id").
 		Joins("LEFT JOIN stock_movements ON stock_movements.item_variant_id = item_variants.id").
 		Group(`item_variants.id, catalog_items.name, item_variants.variant_name, item_variants.sku, item_variants.minimum_stock`). // untuk klausa GROUP BY harus pakai nama kolom ASLI bukan AS atau ALIAS
 		Order("catalog_items.name").

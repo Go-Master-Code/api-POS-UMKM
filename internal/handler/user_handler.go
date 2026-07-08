@@ -35,16 +35,17 @@ func (h *UserHandler) GetAllUsers(c *gin.Context) {
 }
 
 func (h *UserHandler) GetUsersByTenant(c *gin.Context) {
-	// ambil query username jika ada
-	username := c.Query("username")
+	// ambil pagination dari query
+	req := helper.GetPagination(c)
 
-	users, err := h.service.GetUsersByTenant(c.Request.Context(), username)
+	// ambil data beserta pagination
+	users, meta, err := h.service.GetUsersByTenant(c.Request.Context(), req)
 	if err != nil {
 		helper.ErrorResponse(c, constants.ErrorGetData, err)
 		return
 	}
 
-	helper.SuccessResponse(c, constants.SuccessGetData, users)
+	helper.SuccessPaginationResponse(c, constants.SuccessGetData, users, meta)
 }
 
 func (h *UserHandler) GetUserByID(c *gin.Context) {

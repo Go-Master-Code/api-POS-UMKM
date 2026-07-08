@@ -1,12 +1,14 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"time"
 	"umkm-odod/helper"
 	"umkm-odod/internal/constants"
 	"umkm-odod/internal/dto"
+	"umkm-odod/internal/pdf"
 	"umkm-odod/internal/repository"
 
 	"github.com/xuri/excelize/v2"
@@ -21,17 +23,25 @@ type ReportService interface {
 	ExportSalesReport(ctx context.Context, query dto.SaleReportQuery) (*excelize.File, error)
 	ExportPurchaseReport(ctx context.Context, query dto.PurchaseReportQuery) (*excelize.File, error)
 	ExportStockReport(ctx context.Context) (*excelize.File, error)
+	// invoice -> 80 mm
+	ExportSalesInvoicePDF(ctx context.Context, saleID string) (*bytes.Buffer, error) // butuh data dari sales repo
+	// sales report, purchase report, stock report in PDF
+	ExportSalesReportPDF(ctx context.Context, query dto.SaleReportQuery) (*bytes.Buffer, error)
+	ExportPurchaseReportPDF(ctx context.Context, query dto.PurchaseReportQuery) (*bytes.Buffer, error)
+	ExportStockReportPDF(ctx context.Context) (*bytes.Buffer, error)
 }
 
 // struct implementasi
 type reportService struct {
-	repo repository.ReportRepository
+	repo      repository.ReportRepository
+	repoSales repository.SaleRepository // data akan diambil dari sales repo
 }
 
 // constructor
-func NewReportService(repo repository.ReportRepository) ReportService {
+func NewReportService(repo repository.ReportRepository, repoSales repository.SaleRepository) ReportService {
 	return &reportService{
-		repo: repo,
+		repo:      repo,
+		repoSales: repoSales,
 	}
 }
 
@@ -470,4 +480,105 @@ func (s *reportService) ExportStockReport(ctx context.Context) (*excelize.File, 
 	f.SetCellStyle(sheetName, "F8", fmt.Sprintf("F%d", row), helper.CenterAlign(f))
 
 	return f, nil
+}
+
+func (s *reportService) ExportSalesInvoicePDF(ctx context.Context, saleID string) (*bytes.Buffer, error) {
+	// ambil tenant ID dari jwt
+	tenantID := ctx.Value(constants.ContextTenantID).(string)
+
+	sale, err := s.repoSales.GetSaleByID(ctx, tenantID, saleID)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := pdf.GenerateSalesInvoice(*sale)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (s *reportService) ExportSalesReportPDF(ctx context.Context, query dto.SaleReportQuery) (*bytes.Buffer, error) {
+	// tenantID from jwt
+	tenantID := ctx.Value(constants.ContextTenantID).(string)
+
+	// get data sales dulu, []model.Sale
+	sales, err := s.repo.GetSalesReport(ctx, tenantID, query.StartDate, query.EndDate)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// ambil data summary dari sales repo
+	summary, err := s.repo.GetSalesReportSummary(ctx, tenantID, query.StartDate, query.EndDate)
+	if err != nil {
+		return nil, err
+	}
+
+	// kirim data sales sebagai datasource pdf
+	result, err := pdf.GenerateSalesReport(sales, query, summary)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (s *reportService) ExportPurchaseReportPDF(ctx context.Context, query dto.PurchaseReportQuery) (*bytes.Buffer, error) {
+	// tenantID from jwt
+	tenantID := ctx.Value(constants.ContextTenantID).(string)
+
+	// get data purchase dulu, []model.Purchase
+	purchase, err := s.repo.GetPurchaseReport(ctx, tenantID, query.StartDate, query.EndDate)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// ambil data summary dari sales repo
+	summary, err := s.repo.GetPurchaseReportSummary(ctx, tenantID, query.StartDate, query.EndDate)
+	if err != nil {
+		return nil, err
+	}
+
+	// kirim data sales sebagai datasource pdf
+	result, err := pdf.GeneratePurchaseReport(purchase, query, summary)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (s *reportService) ExportStockReportPDF(ctx context.Context) (*bytes.Buffer, error) {
+	// tenantID from jwt
+	tenantID := ctx.Value(constants.ContextTenantID).(string)
+
+	// ambil semua stok
+	query := dto.StockReportQuery{
+		Page:  1,
+		Limit: 100000,
+	}
+
+	// get data purchase dulu, []model.Purchase
+	stock, _, err := s.repo.GetStockReport(ctx, tenantID, query)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// ambil data summary dari sales repo
+	summary, err := s.repo.GetStockReportSummary(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// kirim data sales sebagai datasource pdf
+	result, err := pdf.GenerateStockReport(stock, query, summary)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
 }

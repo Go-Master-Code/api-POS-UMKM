@@ -16,7 +16,7 @@ type User struct {
 	Username    string         `json:"username" gorm:"type:varchar(100);not null"`
 	Password    string         `json:"-" gorm:"type:char(60);not null"`
 	Phone       string         `json:"phone" gorm:"type:varchar(30);not null"`
-	IsActive    bool           `json:"is_active" gorm:"default:true"`
+	IsActive    bool           `json:"is_active"` // jangan pakai gorm:"default:true" jika tidak mau ada default value
 	LastLoginAt *time.Time     `json:"last_login_at"`
 	CreatedAt   time.Time      `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt   time.Time      `gorm:"column:updated_at;autoUpdateTime"`

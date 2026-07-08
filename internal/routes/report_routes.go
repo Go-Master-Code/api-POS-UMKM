@@ -16,4 +16,10 @@ func RegisterReportRoutes(rg *gin.RouterGroup, h *handler.ReportHandler) {
 	rg.GET("reports/sales/export", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.ExportSalesReport)
 	rg.GET("reports/purchase/export", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.ExportPurchaseReport)
 	rg.GET("reports/stock/export", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.ExportStockHandler)
+	// export sales invoice
+	rg.GET("/sales/:id/invoice", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin, constants.RoleCashier), h.ExportSalesInvoicePDF)
+	// export report pdf
+	rg.GET("reports/sales/pdf", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.ExportSalesReportPDF)
+	rg.GET("reports/purchase/pdf", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.ExportPurchaseReportPDF)
+	rg.GET("reports/stock/pdf", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.ExportStockReportPDF)
 }

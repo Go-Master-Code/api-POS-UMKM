@@ -2,6 +2,7 @@ package helper
 
 import (
 	"net/http"
+	"umkm-odod/internal/dto"
 
 	"github.com/gin-gonic/gin"
 )
@@ -11,6 +12,13 @@ type AllSuccess struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    any    `json:"data"`
+}
+
+type AllSuccessPagination struct {
+	Code    int                    `json:"code"`
+	Message string                 `json:"message"`
+	Data    any                    `json:"data"`
+	Meta    dto.PaginationResponse `json:"meta"`
 }
 
 type GetAllSalesOrPurchasePerTenantSuccess struct {
@@ -34,6 +42,16 @@ func SuccessResponse(c *gin.Context, message string, data any) {
 		Code:    http.StatusOK,
 		Message: message,
 		Data:    data,
+	})
+}
+
+// success response yang sudah dilengkapi dengan page, limit, search, sort, order
+func SuccessPaginationResponse(c *gin.Context, message string, data any, meta dto.PaginationResponse) {
+	c.JSON(http.StatusOK, AllSuccessPagination{
+		Code:    http.StatusOK,
+		Message: message,
+		Data:    data,
+		Meta:    meta,
 	})
 }
 

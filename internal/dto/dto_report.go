@@ -55,6 +55,7 @@ type StockReportQuery struct {
 
 type StockReportResponse struct {
 	ItemVariantID string  `json:"item_variant_id"`
+	CategoryName  string  `json:"category_name"`
 	ItemName      string  `json:"item_name"`
 	VariantName   string  `json:"variant_name"`
 	SKU           string  `json:"sku"`

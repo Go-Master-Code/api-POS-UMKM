@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"math"
 	"umkm-odod/helper"
 	"umkm-odod/internal/constants"
 	"umkm-odod/internal/dto"
@@ -17,7 +18,7 @@ import (
 // interface
 type UserService interface {
 	GetAllUsers(ctx context.Context) ([]dto.UserResponse, error) // untuk super admin melihat semua user dari setiap tenant
-	GetUsersByTenant(ctx context.Context, username string) ([]dto.UserResponse, error)
+	GetUsersByTenant(ctx context.Context, req dto.PaginationRequest) ([]dto.UserResponse, dto.PaginationResponse, error)
 	GetUserByID(ctx context.Context, id string) (dto.UserResponse, error)
 	CreateUser(ctx context.Context, req dto.CreateUserRequest) (dto.UserResponse, error)
 	UpdateUser(ctx context.Context, id string, req dto.UpdateUserRequest) (dto.UserResponse, error)
@@ -57,18 +58,30 @@ func (s *userService) GetAllUsers(ctx context.Context) ([]dto.UserResponse, erro
 	return usersDTO, nil
 }
 
-func (s *userService) GetUsersByTenant(ctx context.Context, username string) ([]dto.UserResponse, error) {
+func (s *userService) GetUsersByTenant(ctx context.Context, req dto.PaginationRequest) ([]dto.UserResponse, dto.PaginationResponse, error) {
 	// get tenant ID from jwt
 	tenantID := ctx.Value(constants.ContextTenantID).(string)
 
-	users, err := s.repo.GetUsersByTenant(ctx, tenantID, username)
+	users, total, err := s.repo.GetUsersByTenant(ctx, tenantID, req)
 	if err != nil {
-		return nil, err
+		return nil, dto.PaginationResponse{}, err
 	}
 
 	// convert model to dto
 	usersDTO := helper.ConvertToDTOUserPlural(users)
-	return usersDTO, nil
+
+	// hitung total halaman
+	totalPages := int(math.Ceil(float64(total) / float64(req.Limit)))
+
+	// metadata pagination
+	meta := dto.PaginationResponse{
+		Page:       req.Page,
+		Limit:      req.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}
+
+	return usersDTO, meta, nil
 }
 
 func (s *userService) GetUserByID(ctx context.Context, id string) (dto.UserResponse, error) {
@@ -98,7 +111,7 @@ func (s *userService) CreateUser(ctx context.Context, req dto.CreateUserRequest)
 		Username: req.Username,
 		Password: req.Password,
 		Phone:    req.Phone,
-		IsActive: true,
+		IsActive: req.IsActive, // ambil value dari form frontend agar tidak default = true
 	}
 
 	err := s.repo.CreateUser(ctx, &user)
@@ -276,7 +289,7 @@ func (s *userService) ChangePassword(ctx context.Context, req dto.ChangePassword
 
 	err = s.repo.ChangePassword(ctx, user)
 	if err != nil {
-		return dto.ProfileResponse{}, errors.New("failed to update password")
+		return dto.ProfileResponse{}, err
 	}
 
 	// setelah berhasil change password, buat log nya
