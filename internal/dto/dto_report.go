@@ -1,5 +1,7 @@
 package dto
 
+import "time"
+
 // ================================
 // ==========SALES REPORT==========
 // ================================
@@ -68,4 +70,26 @@ type StockReportResponse struct {
 type StockReportSummary struct {
 	TotalVariants int64 `json:"total_variants"`
 	LowStockItems int64 `json:"low_stock_items"`
+}
+
+// =======================================
+// ===========STOCK CARD REPORT===========
+// =======================================
+
+type StockCardReport struct { // data master barang
+	// Data Tenant
+	TenantName    string
+	TenantAddress string
+	TenantPhone   string
+	ProductName   string // Catalog Item
+	CategoryName  string // Catalog Item Category
+	VariantName   string
+	SKU           string
+	StartDate     time.Time
+	EndDate       time.Time
+	OpeningStock  float64
+	TotalIn       float64
+	TotalOut      float64
+	EndingStock   float64
+	Items         []StockCardResponse
 }

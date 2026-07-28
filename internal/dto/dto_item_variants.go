@@ -7,6 +7,8 @@ type ItemVariantResponse struct {
 	TenantName   string  `json:"tenant_name"`
 	ItemID       string  `json:"item_id"`
 	ItemName     string  `json:"item_name"`
+	CategoryID   string  `json:"category_id"`
+	CategoryName string  `json:"category_name"`
 	SKU          string  `json:"sku"`
 	Barcode      string  `json:"barcode"`
 	VariantName  string  `json:"variant_name"`

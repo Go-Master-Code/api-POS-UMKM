@@ -174,6 +174,7 @@ func ConvertToDTOItemVariantPlural(item []model.ItemVariant) []dto.ItemVariantRe
 			Barcode:      iv.Barcode,
 			VariantName:  iv.VariantName,
 			CostPrice:    iv.CostPrice,
+			MinimumStock: iv.MinimumStock,
 			SellingPrice: iv.SellingPrice,
 			IsActive:     iv.IsActive,
 		})
@@ -188,10 +189,13 @@ func ConvertToDTOItemVariantSingle(item *model.ItemVariant) dto.ItemVariantRespo
 		TenantName:   item.Tenant.Name,
 		ItemID:       item.ItemID,
 		ItemName:     item.Item.Name,
+		CategoryID:   item.Item.CategoryID,
+		CategoryName: item.Item.CatalogCategory.Name,
 		SKU:          item.SKU,
 		Barcode:      item.Barcode,
 		VariantName:  item.VariantName,
 		CostPrice:    item.CostPrice,
+		MinimumStock: item.MinimumStock,
 		SellingPrice: item.SellingPrice,
 		IsActive:     item.IsActive,
 	}

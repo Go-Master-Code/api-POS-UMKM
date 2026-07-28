@@ -5,6 +5,7 @@ type DashBoardSummaryResponse struct {
 	TodayTransactions        int64   `json:"today_transactions"`
 	TodayPurchase            float64 `json:"today_purchase"`
 	TodayPurchaseTransaction int64   `json:"today_purchase_transaction"`
+	TodayProfit              float64 `json:"today_profit"`
 	LowStockCount            int64   `json:"low_stock_count"`
 	TotalItems               int64   `json:"total_items"`
 	TotalVariants            int64   `json:"total_variants"`
@@ -29,4 +30,14 @@ type TopSellingProductsResponse struct {
 	ItemName      string `json:"item_name"`    // nama item nya
 	VariantName   string `json:"variant_name"` // nama variannya
 	QtySold       string `json:"qty_sold"`
+}
+
+// recent sales untuk melihat beberapa data sales terbaru
+type RecentSalesResponse struct {
+	SaleID        string  `json:"sale_id"`
+	InvoiceNumber string  `json:"invoice_number"`
+	CustomerName  string  `json:"customer_name"`
+	CashierName   string  `json:"cashier_name"`
+	GrandTotal    float64 `json:"grand_total"`
+	CreatedAt     string  `json:"created_at"`
 }

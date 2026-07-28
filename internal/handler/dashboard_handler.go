@@ -60,3 +60,13 @@ func (h *DashboardHandler) GetTopSellingProducts(c *gin.Context) {
 
 	helper.SuccessResponse(c, constants.SuccessGetData, topSellingProducts)
 }
+
+func (h *DashboardHandler) GetRecentSales(c *gin.Context) {
+	recentSales, err := h.service.GetRecentSales(c.Request.Context())
+	if err != nil {
+		helper.ErrorResponse(c, constants.ErrorGetData, err)
+		return
+	}
+
+	helper.SuccessResponse(c, constants.SuccessGetData, recentSales)
+}

@@ -16,6 +16,7 @@ type DashboardRepository interface {
 	GetDailySalesChart(ctx context.Context, tenantID string) ([]dto.DailySalesChartResponse, error)
 	GetDailyPurchaseChart(ctx context.Context, tenantID string) ([]dto.DailyPurchaseChartResponse, error)
 	GetTopSellingProducts(ctx context.Context, tenantID string) ([]dto.TopSellingProductsResponse, error)
+	GetRecentSales(ctx context.Context, tenantID string, limit int) ([]dto.RecentSalesResponse, error)
 }
 
 // struct implementasi
@@ -143,4 +144,36 @@ func (r *dashboardRepository) GetTopSellingProducts(ctx context.Context, tenantI
 	}
 
 	return topSellingProducts, nil
+}
+
+func (r *dashboardRepository) GetRecentSales(ctx context.Context, tenantID string, limit int) ([]dto.RecentSalesResponse, error) {
+	var sales []dto.RecentSalesResponse
+
+	err := r.db.WithContext(ctx).Model(&model.Sale{}).
+		Joins("LEFT JOIN users ON users.id = sales.cashier_id").
+		Where("sales.tenant_id = ?", tenantID).
+		Select(`
+			sales.id AS sale_id,
+			sales.invoice_number,
+			sales.customer_name,
+			users.full_name AS cashier_name,
+			sales.grand_total,
+			sales.created_at
+		`).
+		Order("sales.created_at DESC").
+		Limit(limit).
+		Scan(&sales).Error
+	/*
+		Kenapa pakai scan()
+		Karena kita mengambil:
+		field dari sales,
+		field dari users,
+		alias (cashier_name),
+		hasil query ini bukan entity Sale, sehingga Scan() adalah pilihan yang tepat.
+	*/
+
+	if err != nil {
+		return nil, err
+	}
+	return sales, nil
 }

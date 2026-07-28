@@ -9,6 +9,7 @@ import (
 	"umkm-odod/internal/constants"
 	"umkm-odod/internal/dto"
 	"umkm-odod/internal/pdf"
+	"umkm-odod/internal/report"
 	"umkm-odod/internal/repository"
 
 	"github.com/xuri/excelize/v2"
@@ -29,19 +30,26 @@ type ReportService interface {
 	ExportSalesReportPDF(ctx context.Context, query dto.SaleReportQuery) (*bytes.Buffer, error)
 	ExportPurchaseReportPDF(ctx context.Context, query dto.PurchaseReportQuery) (*bytes.Buffer, error)
 	ExportStockReportPDF(ctx context.Context) (*bytes.Buffer, error)
+	ExportStockCardPDF(ctx context.Context, itemVariantID string) (*bytes.Buffer, error)
 }
 
 // struct implementasi
 type reportService struct {
-	repo      repository.ReportRepository
-	repoSales repository.SaleRepository // data akan diambil dari sales repo
+	repo              repository.ReportRepository
+	repoTenant        repository.TenantRepository
+	repoSales         repository.SaleRepository          // data akan diambil dari sales repo
+	repoStockMovement repository.StockMovementRepository // data akan diambil dari stock movement repo
+	repoItemVariant   repository.ItemVariantRepository   // data item variant untuk header / master stock card diambil dari repo ini
 }
 
 // constructor
-func NewReportService(repo repository.ReportRepository, repoSales repository.SaleRepository) ReportService {
+func NewReportService(repo repository.ReportRepository, repoTenant repository.TenantRepository, repoSales repository.SaleRepository, repoStockMovement repository.StockMovementRepository, repoItemVariant repository.ItemVariantRepository) ReportService {
 	return &reportService{
-		repo:      repo,
-		repoSales: repoSales,
+		repo:              repo,
+		repoTenant:        repoTenant,
+		repoSales:         repoSales,
+		repoStockMovement: repoStockMovement,
+		repoItemVariant:   repoItemVariant,
 	}
 }
 
@@ -555,6 +563,19 @@ func (s *reportService) ExportStockReportPDF(ctx context.Context) (*bytes.Buffer
 	// tenantID from jwt
 	tenantID := ctx.Value(constants.ContextTenantID).(string)
 
+	// ambil informasi tenant sebagai parameter untuk PDF Writer
+	tenant, err := s.repoTenant.GetTenantByID(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// masukkan ke struct CompanyInfo
+	companyInfo := report.CompanyInfo{
+		Name:    tenant.Name,
+		Address: tenant.Address,
+		Phone:   tenant.Phone,
+	}
+
 	// ambil semua stok
 	query := dto.StockReportQuery{
 		Page:  1,
@@ -575,7 +596,108 @@ func (s *reportService) ExportStockReportPDF(ctx context.Context) (*bytes.Buffer
 	}
 
 	// kirim data sales sebagai datasource pdf
-	result, err := pdf.GenerateStockReport(stock, query, summary)
+	result, err := pdf.GenerateStockReport(stock, companyInfo, query, summary)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (s *reportService) ExportStockCardPDF(ctx context.Context, itemVariantID string) (*bytes.Buffer, error) {
+	// ambil tenant dari JWT
+	tenantID := ctx.Value(constants.ContextTenantID).(string)
+	stockMovement, err := s.repoStockMovement.GetMovementsByVariant(ctx, tenantID, itemVariantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// buat row detil stock card
+	var stockCardDetail []dto.StockCardResponse
+
+	// var running balance
+	var runningBalance float64
+
+	// inisiasi starting dan ending stock
+	var startingStock, endingStock float64
+
+	// inisiasi totalIn dan totalOut
+	var totalIn, totalOut float64
+
+	// inisiasi starting dan ending date
+	var startingDate, endingDate time.Time
+
+	for i, sm := range stockMovement {
+		var qtyIn float64
+		var qtyOut float64
+
+		// ambil starting date
+		if i == 0 {
+			startingDate = sm.CreatedAt
+			startingStock = sm.Qty
+		}
+
+		if i == len(stockMovement)-1 { // row terakhir
+			endingDate = sm.CreatedAt
+		}
+
+		// ambil
+		// in atau out
+		if sm.Qty > 0 {
+			qtyIn = sm.Qty
+			totalIn += sm.Qty
+		} else {
+			qtyOut = sm.Qty * -1
+			totalOut += sm.Qty * -1
+		}
+
+		// running stock balance dikalkulasi terus per row
+		runningBalance += sm.Qty
+
+		// append response
+		stockCardDetail = append(stockCardDetail, dto.StockCardResponse{
+			MovementDate:  sm.CreatedAt,
+			MovementType:  sm.MovementType,
+			QtyIn:         qtyIn,
+			QtyOut:        qtyOut,
+			Balance:       runningBalance,
+			ReferenceType: sm.ReferenceType,
+			ReferenceID:   sm.ReferenceID,
+			Notes:         sm.Notes,
+			CreatedByName: sm.CreatedByUser.FullName,
+		})
+
+		// ending stock diambil dari running balance terakhir
+		endingStock = runningBalance
+	}
+
+	// ambil data item variant
+	iv, err := s.repoItemVariant.GetItemVariantByID(ctx, tenantID, itemVariantID)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// buat header / master stock card
+	stockCardReport := dto.StockCardReport{
+		// Data Tenant
+		TenantName:    iv.Tenant.Name,
+		TenantAddress: iv.Tenant.Address,
+		TenantPhone:   iv.Tenant.Phone,
+		VariantName:   iv.VariantName,
+		SKU:           iv.SKU,
+		CategoryName:  iv.Item.CatalogCategory.Name,
+		ProductName:   iv.Item.Name,
+		StartDate:     startingDate,
+		EndDate:       endingDate,
+		OpeningStock:  startingStock,
+		EndingStock:   endingStock,
+		TotalIn:       totalIn,
+		TotalOut:      totalOut,
+		Items:         stockCardDetail,
+	}
+
+	result, err := pdf.GenerateStockCardReport(stockCardReport)
 	if err != nil {
 		return nil, err
 	}

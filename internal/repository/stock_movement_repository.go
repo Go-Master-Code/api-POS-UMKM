@@ -70,7 +70,7 @@ func (r *stockMovementRepository) GetCurrentStock(ctx context.Context, tenantID 
 		Scan(&totalStock).
 		Error
 
-	// coalesce -> jika belum ada movement sum(qty) maka akan return null bukan 0
+	// coalesce -> jika belum ada movement sum(qty) maka akan return 0 bukan null
 
 	if err != nil {
 		return 0, err

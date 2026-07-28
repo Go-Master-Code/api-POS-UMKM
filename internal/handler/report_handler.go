@@ -338,3 +338,35 @@ func (h *ReportHandler) ExportStockReportPDF(c *gin.Context) {
 		file.Bytes(),
 	)
 }
+
+func (h *ReportHandler) ExportStockCardPDF(c *gin.Context) {
+	// ambil itemVariantID dari param
+	itemVariantID := c.Param("id")
+
+	file, err := h.service.ExportStockCardPDF(c.Request.Context(), itemVariantID)
+
+	if err != nil {
+		helper.ErrorGenerateReport(c, err)
+		return
+	}
+
+	// generate file name
+	fileName := fmt.Sprintf(
+		"stock-card-%s.pdf",
+		time.Now().Format("20060102150405"), //yyyymmddhhmmss
+	)
+
+	c.Header(
+		"Content-Disposition",
+		fmt.Sprintf(
+			"attachment; filename=%s",
+			fileName,
+		),
+	)
+
+	c.Data(
+		http.StatusOK,
+		"application/pdf",
+		file.Bytes(),
+	)
+}

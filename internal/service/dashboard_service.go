@@ -13,6 +13,7 @@ type DashboardService interface {
 	GetDailySalesChart(ctx context.Context) ([]dto.DailySalesChartResponse, error)
 	GetDailyPurchaseChart(ctx context.Context) ([]dto.DailyPurchaseChartResponse, error)
 	GetTopSellingProducts(ctx context.Context) ([]dto.TopSellingProductsResponse, error)
+	GetRecentSales(ctx context.Context) ([]dto.RecentSalesResponse, error)
 }
 
 // struct implementasi
@@ -51,26 +52,9 @@ func (s *dashboardService) GetSummary(ctx context.Context) (dto.DashBoardSummary
 	// =============================
 	// ==========LOW STOCK==========
 	// =============================
-	variants, err := s.itemVariantRepo.GetAllItemVariants(ctx, tenantID)
+	lowStockCount, err := s.itemVariantRepo.GetLowStockCount(ctx, tenantID)
 	if err != nil {
 		return dto.DashBoardSummaryResponse{}, err
-	}
-
-	var lowStockCount int64
-
-	for _, variant := range variants {
-		// ambil stok realtime
-		// kalau tx ada -> pakai transaction
-		// kalau tx nil -> pakai repository db biasa, dan query akan menggunakan r.db, tidak pakai mode transaction (tx)
-		currentStock, err := s.stockMovementRepo.GetCurrentStock(ctx, tenantID, nil, variant.ID)
-
-		if err != nil {
-			return dto.DashBoardSummaryResponse{}, err
-		}
-
-		if currentStock < variant.MinimumStock {
-			lowStockCount += 1 // increment jumlah barang kategori low stock
-		}
 	}
 
 	// ============================
@@ -106,24 +90,24 @@ func (s *dashboardService) GetSummary(ctx context.Context) (dto.DashBoardSummary
 	// =================================
 	// ==========ITEM VARIANTS==========
 	// =================================
-	itemVariants, err := s.itemVariantRepo.GetItemVariants(ctx, tenantID, "")
+	totalVariants, err := s.itemVariantRepo.CountItemVariants(ctx, tenantID)
 	if err != nil {
 		return dto.DashBoardSummaryResponse{}, err
 	}
 
-	// convert int ke int64
-	TotalVariants := int64(len(itemVariants))
-
-	// mapping hasil ke dto
+	// =================================
+	// MAPPING SEMUA HASIL QUERY KE DTO
+	// =================================
 	dashboardSummary := dto.DashBoardSummaryResponse{
-		TodaySales:               totalSales,
-		TodayTransactions:        totalTransactions,
-		LowStockCount:            lowStockCount,
-		TodayPurchase:            totalPurchases,
+		TodaySales:        totalSales,
+		TodayTransactions: totalTransactions,
+		LowStockCount:     lowStockCount,
+		TodayPurchase:     totalPurchases,
+		// TodayProfit:              totalSales - totalPurchases, dihitung nanti
 		TodayPurchaseTransaction: totalPurchaseTransactions,
 		TotalSuppliers:           totalSuppliers,
 		TotalItems:               totalItems,
-		TotalVariants:            TotalVariants,
+		TotalVariants:            totalVariants,
 	}
 
 	return dashboardSummary, nil
@@ -164,4 +148,18 @@ func (s *dashboardService) GetTopSellingProducts(ctx context.Context) ([]dto.Top
 	}
 
 	return topSellingProducts, nil
+}
+
+func (s *dashboardService) GetRecentSales(ctx context.Context) ([]dto.RecentSalesResponse, error) {
+	// get tenantID from ctx
+	tenantID := ctx.Value(constants.ContextTenantID).(string)
+
+	const limit = 5 // dashboard hanya membutuhkan 5 trx terakhir
+
+	recentSales, err := s.dashboardRepo.GetRecentSales(ctx, tenantID, limit)
+	if err != nil {
+		return nil, err
+	}
+
+	return recentSales, nil
 }

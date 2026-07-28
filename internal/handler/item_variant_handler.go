@@ -111,3 +111,13 @@ func (h *ItemVariantHandler) GetLowStockItem(c *gin.Context) {
 
 	helper.SuccessResponse(c, constants.SuccessGetData, lowStock)
 }
+
+func (h *ItemVariantHandler) CountLowStockItem(c *gin.Context) {
+	count, err := h.service.CountLowStockItem(c.Request.Context())
+	if err != nil {
+		helper.ErrorResponse(c, constants.ErrorGetData, err)
+		return
+	}
+
+	helper.SuccessResponse(c, constants.SuccessGetData, count)
+}

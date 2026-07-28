@@ -16,6 +16,7 @@ type ItemVariantService interface {
 	GetItemVariants(ctx context.Context, name string) ([]dto.ItemVariantResponse, error)
 	GetItemVariantByID(ctx context.Context, id string) (dto.ItemVariantResponse, error)
 	GetLowStockItem(ctx context.Context) ([]dto.LowStockResponse, error)
+	CountLowStockItem(ctx context.Context) (int64, error)
 	CreateItemVariant(ctx context.Context, req dto.CreateItemVariantRequest) (dto.ItemVariantResponse, error)
 	UpdateItemVariant(ctx context.Context, id string, req dto.UpdateItemVariantRequest) (dto.ItemVariantResponse, error)
 	DeleteItemVariant(ctx context.Context, id string) (dto.ItemVariantResponse, error)
@@ -68,35 +69,18 @@ func (s *itemVariantService) GetLowStockItem(ctx context.Context) ([]dto.LowStoc
 	// get tenant ID from jwt
 	tenantID := ctx.Value(constants.ContextTenantID).(string)
 
-	variants, err := s.itemVariantRepo.GetAllItemVariants(ctx, tenantID)
+	lowStockItems, err := s.itemVariantRepo.GetLowStockItems(ctx, tenantID)
 	if err != nil {
 		return nil, err
 	}
 
-	var lowStock []dto.LowStockResponse
-	for _, variant := range variants {
-		// ambil stok realtime
-		// kalau tx ada -> pakai transaction
-		// kalau tx nil -> pakai repository db biasa, dan query akan menggunakan r.db, tidak pakai mode transaction (tx)
-		currentStock, err := s.stockMovementRepo.GetCurrentStock(ctx, tenantID, nil, variant.ID)
+	return lowStockItems, nil
+}
 
-		if err != nil {
-			return nil, err
-		}
-
-		// cek low stock -> hanya record data ini yang akan muncul
-		if currentStock <= variant.MinimumStock {
-			lowStock = append(lowStock, dto.LowStockResponse{
-				ItemVariantID: variant.ID,
-				ItemName:      variant.Item.Name,
-				SKU:           variant.SKU,
-				VariantName:   variant.VariantName,
-				CurrentStock:  currentStock,
-				MinimumStock:  variant.MinimumStock,
-			})
-		}
-	}
-	return lowStock, nil
+func (s *itemVariantService) CountLowStockItem(ctx context.Context) (int64, error) {
+	tenantID := ctx.Value(constants.ContextTenantID).(string)
+	count, err := s.itemVariantRepo.GetLowStockCount(ctx, tenantID)
+	return count, err
 }
 
 func (s *itemVariantService) CreateItemVariant(ctx context.Context, req dto.CreateItemVariantRequest) (dto.ItemVariantResponse, error) {

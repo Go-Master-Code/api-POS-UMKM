@@ -135,7 +135,7 @@ func main() {
 
 	// dependency injection report
 	reportRepo := repository.NewReportRepository(database.DB)
-	reportService := service.NewReportService(reportRepo, saleRepo)
+	reportService := service.NewReportService(reportRepo, tenantRepo, saleRepo, stockMovementRepo, itemVariantRepo)
 	reportHandler := handler.NewReportHandler(reportService)
 
 	// router group public tidak perlu pakai middleware AuthRequired
