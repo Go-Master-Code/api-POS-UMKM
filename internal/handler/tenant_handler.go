@@ -110,3 +110,33 @@ func (h *TenantHandler) DeleteTenant(c *gin.Context) {
 
 	helper.SuccessResponse(c, constants.SuccessDeleteData, tenantDTO)
 }
+
+// Get tenant profile for menu Settings - Tenant Profile
+func (h *TenantHandler) GetTenantProfile(c *gin.Context) {
+	tenantProfileDTO, err := h.service.GetTenantProfile(c.Request.Context())
+	if err != nil {
+		helper.ErrorResponse(c, constants.ErrorGetData, err)
+		return
+	}
+
+	helper.SuccessResponse(c, constants.SuccessGetData, tenantProfileDTO)
+}
+
+func (h *TenantHandler) UpdateTenantProfile(c *gin.Context) {
+	// parsing request body
+	var req dto.UpdateTenantProfileRequest
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		helper.ErrorParsingRequestBody(c, err)
+		return
+	}
+
+	// update service
+	updatedProfileDTO, err := h.service.UpdateTenantProfile(c.Request.Context(), req)
+	if err != nil {
+		helper.ErrorResponse(c, constants.ErrorUpdateData, err)
+		return
+	}
+
+	helper.SuccessResponse(c, constants.SuccessUpdateData, updatedProfileDTO)
+}

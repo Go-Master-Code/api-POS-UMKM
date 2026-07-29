@@ -16,4 +16,7 @@ func RegisterTenantRoutes(rg *gin.RouterGroup, h *handler.TenantHandler) {
 	rg.POST("/tenants", middleware.AuthRole(constants.RoleSuperAdmin), h.CreateTenant)
 	rg.PUT("/tenants/:id", middleware.AuthRole(constants.RoleSuperAdmin), h.UpdateTenant)
 	rg.DELETE("/tenants/:id", middleware.AuthRole(constants.RoleSuperAdmin), h.DeleteTenant)
+	// for menu Settings - Tenant Profile
+	rg.GET("/tenant-profile", middleware.AuthRole(constants.RoleAdmin, constants.RoleOwner), h.GetTenantProfile)
+	rg.PUT("/tenant-profile", middleware.AuthRole(constants.RoleAdmin, constants.RoleOwner), h.UpdateTenantProfile)
 }

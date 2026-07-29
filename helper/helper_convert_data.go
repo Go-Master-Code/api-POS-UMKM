@@ -28,6 +28,23 @@ func ConvertToDTOTenantPlural(tenant []model.Tenant) []dto.TenantResponse {
 	return tenantsDTO
 }
 
+func ConvertToDTOTenantProfile(tenant *model.Tenant) dto.TenantProfileResponse {
+	tenantProfileDTO := dto.TenantProfileResponse{
+		ID:            tenant.ID,
+		Name:          tenant.Name,
+		OwnerName:     tenant.OwnerName,
+		Phone:         tenant.Phone,
+		Email:         tenant.Email,
+		Address:       tenant.Address,
+		Logo:          tenant.Logo,
+		Currency:      tenant.Currency,
+		TimeZone:      tenant.TimeZone,
+		ReceiptFooter: tenant.ReceiptFooter,
+	}
+	return tenantProfileDTO
+
+}
+
 // catalog categories
 func ConvertToDTOCatalogCategorySingle(catalogCategory *model.CatalogCategory) dto.CatalogCategoryResponse {
 	var ccDTO dto.CatalogCategoryResponse

@@ -14,6 +14,9 @@ type TenantRepository interface {
 	CreateTenant(ctx context.Context, tenant *model.Tenant) error
 	UpdateTenant(ctx context.Context, id string, updateMap map[string]any) error
 	DeleteTenant(ctx context.Context, id string) error
+	// method untuk settings - tenant profile
+	GetTenantProfile(ctx context.Context, tenantID string) (*model.Tenant, error)
+	UpdateTenantProfile(ctx context.Context, id string, updateMap map[string]any) error
 }
 
 // struct implementasi
@@ -65,4 +68,17 @@ func (r *tenantRepository) UpdateTenant(ctx context.Context, id string, updateMa
 
 func (r *tenantRepository) DeleteTenant(ctx context.Context, id string) error {
 	return r.db.WithContext(ctx).Where("id = ?", id).Delete(&model.Tenant{}).Error
+}
+
+func (r *tenantRepository) GetTenantProfile(ctx context.Context, tenantID string) (*model.Tenant, error) {
+	var tenant model.Tenant
+	err := r.db.WithContext(ctx).First(&tenant, "id = ?", tenantID).Error
+	if err != nil {
+		return nil, err
+	}
+	return &tenant, nil
+}
+
+func (r *tenantRepository) UpdateTenantProfile(ctx context.Context, id string, updateMap map[string]any) error {
+	return r.db.WithContext(ctx).Model(model.Tenant{}).Where("id = ?", id).Updates(updateMap).Error
 }

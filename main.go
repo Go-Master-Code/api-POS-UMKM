@@ -20,6 +20,14 @@ func main() {
 	// instance gin engine
 	r := gin.New()
 
+	// Expose folder storage agar file upload dapat diakses browser
+	r.Static("/storage", "./storage")
+	/*
+		artinya:
+		URL	         Folder di Server
+		/storage	 ./storage
+	*/
+
 	// tambahkan CORS apabila server backend berbeda dengan frontend
 	// ===============================
 	// 🔥 CORS CONFIG
@@ -138,6 +146,10 @@ func main() {
 	reportService := service.NewReportService(reportRepo, tenantRepo, saleRepo, stockMovementRepo, itemVariantRepo)
 	reportHandler := handler.NewReportHandler(reportService)
 
+	// dependency injection upload file
+	uploadFileService := service.NewUploadService()
+	uploadFileHandler := handler.NewUploadHandler(uploadFileService)
+
 	// router group public tidak perlu pakai middleware AuthRequired
 	public := r.Group("/api")
 	// endpoint login
@@ -176,6 +188,8 @@ func main() {
 		routes.RegisterReportRoutes(authorized, reportHandler)
 		// list handler activity log
 		routes.RegisterActivityLogRoutes(authorized, activityLogHandler)
+		// list handler upload logo
+		routes.RegisterUploadLogoRoutes(authorized, uploadFileHandler)
 	}
 
 	// run server

@@ -14,6 +14,11 @@ type AllSuccess struct {
 	Data    any    `json:"data"`
 }
 
+type UploadLogoResponse struct {
+	FileName string `json:"file_name"`
+	URL      string `json:"url"`
+}
+
 type AllSuccessPagination struct {
 	Code    int                    `json:"code"`
 	Message string                 `json:"message"`
@@ -116,5 +121,17 @@ func SuccessGetAllLogsPerTenant(c *gin.Context, data any, total int, page int, l
 		Total:   total,
 		Page:    page,
 		Limit:   limit,
+	})
+}
+
+// success upload file
+func SuccessUploadLogo(c *gin.Context, message, fileName, url string) {
+	c.JSON(http.StatusOK, AllSuccess{
+		Code:    http.StatusOK,
+		Message: message,
+		Data: UploadLogoResponse{
+			FileName: fileName,
+			URL:      url,
+		},
 	})
 }
