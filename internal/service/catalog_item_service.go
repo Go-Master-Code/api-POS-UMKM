@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math"
 	"umkm-odod/helper"
 	"umkm-odod/internal/constants"
 	"umkm-odod/internal/dto"
@@ -13,7 +14,7 @@ import (
 
 // interface
 type CatalogItemService interface {
-	GetCatalogItems(ctx context.Context, name string) ([]dto.CatalogItemResponse, error)
+	GetCatalogItems(ctx context.Context, req dto.PaginationRequest) ([]dto.CatalogItemResponse, dto.PaginationResponse, error)
 	GetCatalogItemByID(ctx context.Context, id string) (dto.CatalogItemResponse, error)
 	CreateCatalogItem(ctx context.Context, req dto.CreateCatalogItemRequest) (dto.CatalogItemResponse, error)
 	UpdateCatalogItem(ctx context.Context, id string, req dto.UpdateCatalogItemRequest) (dto.CatalogItemResponse, error)
@@ -33,18 +34,30 @@ func NewCatalogItemService(repo repository.CatalogItemRepository) CatalogItemSer
 }
 
 // struct method
-func (s *catalogItemService) GetCatalogItems(ctx context.Context, name string) ([]dto.CatalogItemResponse, error) {
+func (s *catalogItemService) GetCatalogItems(ctx context.Context, req dto.PaginationRequest) ([]dto.CatalogItemResponse, dto.PaginationResponse, error) {
 	// get tenant ID from jwt
 	tenantID := ctx.Value(constants.ContextTenantID).(string)
 
-	ci, err := s.repo.GetCatalogItems(ctx, tenantID, name)
+	ci, total, err := s.repo.GetCatalogItems(ctx, tenantID, req)
 	if err != nil {
-		return nil, err
+		return nil, dto.PaginationResponse{}, err
 	}
 
 	// convert model to dto
 	ciDTO := helper.ConvertToDTOCatalogItemPlural(ci)
-	return ciDTO, nil
+
+	// hitung total halaman
+	totalPages := int(math.Ceil(float64(total) / float64(req.Limit)))
+
+	// metadata pagination
+	meta := dto.PaginationResponse{
+		Page:       req.Page,
+		Limit:      req.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}
+
+	return ciDTO, meta, nil
 }
 
 func (s *catalogItemService) GetCatalogItemByID(ctx context.Context, id string) (dto.CatalogItemResponse, error) {

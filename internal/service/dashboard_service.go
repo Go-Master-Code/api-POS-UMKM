@@ -79,13 +79,13 @@ func (s *dashboardService) GetSummary(ctx context.Context) (dto.DashBoardSummary
 	// ==============================================
 	// ==========CATALOG ITEM (JUMLAH ITEM)==========
 	// ==============================================
-	catalogItems, err := s.catalogItemRepo.GetCatalogItems(ctx, tenantID, "")
+	total, err := s.catalogItemRepo.CountCatalogItems(ctx, tenantID)
 	if err != nil {
 		return dto.DashBoardSummaryResponse{}, err
 	}
 
 	// convert int ke int64
-	totalItems := int64(len(catalogItems))
+	totalItems := total
 
 	// =================================
 	// ==========ITEM VARIANTS==========

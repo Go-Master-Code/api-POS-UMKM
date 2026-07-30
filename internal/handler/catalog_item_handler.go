@@ -23,16 +23,16 @@ func NewCatalogItemHandler(service service.CatalogItemService) *CatalogItemHandl
 
 // struct method
 func (h *CatalogItemHandler) GetCatalogItems(c *gin.Context) {
-	// coba ambil query param name
-	name := c.Query("name")
+	// ambil pagination dari query, sudah berisi juga keyword untuk search data dari table
+	req := helper.GetPagination(c)
 
-	ciDTO, err := h.service.GetCatalogItems(c.Request.Context(), name)
+	ciDTO, meta, err := h.service.GetCatalogItems(c.Request.Context(), req)
 	if err != nil {
 		helper.ErrorResponse(c, constants.ErrorGetData, err)
 		return
 	}
 
-	helper.SuccessResponse(c, constants.SuccessGetData, ciDTO)
+	helper.SuccessPaginationResponse(c, constants.SuccessGetData, ciDTO, meta)
 }
 
 func (h *CatalogItemHandler) GetCatalogItemByID(c *gin.Context) {
