@@ -20,6 +20,7 @@ type UpdateTenantProfileRequest struct {
 	Phone         *string `json:"phone" binding:"omitempty,max=30"`
 	Email         *string `json:"email" binding:"omitempty,email,max=150"`
 	Address       *string `json:"address" binding:"omitempty"`
+	Logo          *string `json:"logo"`
 	Currency      *string `json:"currency" binding:"omitempty,len=3"`
 	TimeZone      *string `json:"time_zone" binding:"omitempty,max=100"`
 	ReceiptFooter *string `json:"receipt_footer" binding:"omitempty"`

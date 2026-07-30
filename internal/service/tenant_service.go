@@ -185,6 +185,9 @@ func (s *tenantService) UpdateTenantProfile(ctx context.Context, req dto.UpdateT
 	if req.TimeZone != nil {
 		updateMap["time_zone"] = *req.TimeZone
 	}
+	if req.Logo != nil {
+		updateMap["logo"] = *req.Logo
+	}
 
 	// ambil tenantID dari context
 	tenantID := ctx.Value(constants.ContextTenantID).(string)

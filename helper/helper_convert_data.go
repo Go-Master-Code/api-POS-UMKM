@@ -52,6 +52,7 @@ func ConvertToDTOCatalogCategorySingle(catalogCategory *model.CatalogCategory) d
 	ccDTO.Name = catalogCategory.Name
 	ccDTO.TenantID = catalogCategory.TenantID
 	ccDTO.TenantName = catalogCategory.Tenant.Name
+	ccDTO.CreatedAt = catalogCategory.CreatedAt
 	return ccDTO
 }
 
@@ -63,6 +64,7 @@ func ConvertToDTOCatalogCategoryPlural(catalogCategory []model.CatalogCategory) 
 			Name:       cc.Name,
 			TenantID:   cc.TenantID,
 			TenantName: cc.Tenant.Name,
+			CreatedAt:  cc.CreatedAt,
 		})
 	}
 	return ccDTO

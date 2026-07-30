@@ -11,4 +11,5 @@ import (
 func RegisterUploadLogoRoutes(rg *gin.RouterGroup, h *handler.UploadHandler) {
 	// endpoint upload logo
 	rg.POST("/upload/logo", middleware.AuthRole(constants.RoleAdmin, constants.RoleOwner), h.UploadLogo)
+	rg.DELETE("/upload/logo/:fileName", middleware.AuthRole(constants.RoleAdmin, constants.RoleOwner), h.DeleteLogo)
 }

@@ -23,16 +23,16 @@ func NewCatalogCategoryHandler(service service.CatalogCategoryService) *CatalogC
 
 // struct method
 func (h *CatalogCategoryHandler) GetCatalogCategories(c *gin.Context) {
-	// ambil query name jika ada
-	name := c.Query("name")
+	// ambil pagination dari query, sudah berisi juga keyword untuk search data dari table
+	req := helper.GetPagination(c)
 
-	ccDTO, err := h.service.GetCatalogCategories(c.Request.Context(), name)
+	ccDTO, meta, err := h.service.GetCatalogCategories(c.Request.Context(), req)
 	if err != nil {
 		helper.ErrorResponse(c, constants.ErrorGetData, err)
 		return
 	}
 
-	helper.SuccessResponse(c, constants.SuccessGetData, ccDTO)
+	helper.SuccessPaginationResponse(c, constants.SuccessGetData, ccDTO, meta)
 }
 
 func (h *CatalogCategoryHandler) GetCatalogCategoryByID(c *gin.Context) {

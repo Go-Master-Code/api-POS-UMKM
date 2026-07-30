@@ -3,6 +3,7 @@ package handler
 import (
 	"fmt"
 	"umkm-odod/helper"
+	"umkm-odod/internal/constants"
 	"umkm-odod/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -49,4 +50,21 @@ func (h *UploadHandler) UploadLogo(c *gin.Context) {
 
 	// response berhasil
 	helper.SuccessUploadLogo(c, "logo uploaded successfully", fileName, url)
+}
+
+func (h *UploadHandler) DeleteLogo(c *gin.Context) {
+	// ambil nama file dari URL
+	fileName := c.Param("fileName")
+	if fileName == "" {
+		helper.ErrorResponse(c, "file name is required", nil)
+		return
+	}
+
+	err := h.service.DeleteLogo(fileName)
+	if err != nil {
+		helper.ErrorResponse(c, constants.ErrorDeleteData, err)
+		return
+	}
+
+	helper.SuccessResponse(c, "logo deleted successfully", nil)
 }

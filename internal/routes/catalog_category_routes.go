@@ -12,7 +12,7 @@ func RegisterCatalogCategoryRoutes(rg *gin.RouterGroup, h *handler.CatalogCatego
 	// endpoint catalog categories
 	rg.GET("/catalog_categories", h.GetCatalogCategories)
 	rg.GET("/catalog_categories/:id", h.GetCatalogCategoryByID)
-	rg.POST("/catalog_categories/", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.CreateCatalogCategory)
+	rg.POST("/catalog_categories", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.CreateCatalogCategory)
 	rg.PUT("/catalog_categories/:id", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.UpdateCatalogCategory)
 	rg.DELETE("/catalog_categories/:id", h.DeleteCatalogCategory)
 }

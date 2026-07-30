@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math"
 	"umkm-odod/helper"
 	"umkm-odod/internal/constants"
 	"umkm-odod/internal/dto"
@@ -13,7 +14,7 @@ import (
 
 // interface
 type CatalogCategoryService interface {
-	GetCatalogCategories(ctx context.Context, name string) ([]dto.CatalogCategoryResponse, error)
+	GetCatalogCategories(ctx context.Context, req dto.PaginationRequest) ([]dto.CatalogCategoryResponse, dto.PaginationResponse, error)
 	GetCatalogCategoryByID(ctx context.Context, id string) (dto.CatalogCategoryResponse, error)
 	CreateCatalogCategory(ctx context.Context, req dto.CreateCatalogCategoryRequest) (dto.CatalogCategoryResponse, error)
 	UpdateCatalogCategory(ctx context.Context, id string, req dto.UpdateCatalogCategoryRequest) (dto.CatalogCategoryResponse, error)
@@ -33,18 +34,30 @@ func NewCatalogCategoryService(repo repository.CatalogCategoryRepository) Catalo
 }
 
 // struct method
-func (s *catalogCategoryService) GetCatalogCategories(ctx context.Context, name string) ([]dto.CatalogCategoryResponse, error) {
+func (s *catalogCategoryService) GetCatalogCategories(ctx context.Context, req dto.PaginationRequest) ([]dto.CatalogCategoryResponse, dto.PaginationResponse, error) {
 	// get tenant ID from jwt
 	tenantID := ctx.Value(constants.ContextTenantID).(string)
 
-	cc, err := s.repo.GetCatalogCategories(ctx, tenantID, name)
+	cc, total, err := s.repo.GetCatalogCategories(ctx, tenantID, req)
 	if err != nil {
-		return nil, err
+		return nil, dto.PaginationResponse{}, err
 	}
 
 	// convert model to dto
 	ccDTO := helper.ConvertToDTOCatalogCategoryPlural(cc)
-	return ccDTO, nil
+
+	// hitung total halaman
+	totalPages := int(math.Ceil(float64(total) / float64(req.Limit)))
+
+	// metadata pagination
+	meta := dto.PaginationResponse{
+		Page:       req.Page,
+		Limit:      req.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}
+
+	return ccDTO, meta, nil
 }
 
 func (s *catalogCategoryService) GetCatalogCategoryByID(ctx context.Context, id string) (dto.CatalogCategoryResponse, error) {

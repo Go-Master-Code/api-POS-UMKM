@@ -1,11 +1,14 @@
 package dto
 
+import "time"
+
 // dto response
 type CatalogCategoryResponse struct {
-	ID         string `json:"id"`
-	Name       string `json:"name"`
-	TenantID   string `json:"tenant_id"`
-	TenantName string `json:"tenant_name"`
+	ID         string    `json:"id"`
+	Name       string    `json:"name"`
+	TenantID   string    `json:"tenant_id"`
+	TenantName string    `json:"tenant_name"`
+	CreatedAt  time.Time `json:"created_at"`
 }
 
 // create request

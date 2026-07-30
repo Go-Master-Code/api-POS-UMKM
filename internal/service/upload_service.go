@@ -28,6 +28,8 @@ type UploadService interface {
 		|--------------------------------------------------------------------------
 	*/
 	UploadLogo(file *multipart.FileHeader) (string, error)
+	// delete logo lama
+	DeleteLogo(fileName string) error
 }
 
 // struct implementasi
@@ -124,4 +126,13 @@ func (s *uploadService) UploadLogo(file *multipart.FileHeader) (string, error) {
 	}
 
 	return fileName, nil
+}
+
+func (s *uploadService) DeleteLogo(fileName string) error {
+	path := filepath.Join("storage/logo", fileName)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return nil
+	}
+	return os.Remove(path)
+	// Kalau file sudah tidak ada, kita anggap sukses.
 }
