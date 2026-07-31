@@ -10,10 +10,8 @@ import (
 
 // interface
 type ItemVariantRepository interface {
-	GetAllItemVariants(ctx context.Context, tenantID string) ([]model.ItemVariant, error)
-	GetItemVariants(ctx context.Context, tenantID string, name string) ([]model.ItemVariant, error)
+	GetItemVariants(ctx context.Context, tenantID string, catalogItemID string, req dto.PaginationRequest) ([]model.ItemVariant, int64, error)
 	CountItemVariants(ctx context.Context, tenantID string) (int64, error) // untuk summary dashboard
-
 	GetItemVariantByID(ctx context.Context, tenantID string, id string) (*model.ItemVariant, error)
 	CreateItemVariant(ctx context.Context, iv *model.ItemVariant) error
 	UpdateItemVariant(ctx context.Context, tenantID string, id string, updateMap map[string]any) error
@@ -37,34 +35,69 @@ func NewItemVariantRepository(db *gorm.DB) ItemVariantRepository {
 }
 
 // struct method
-func (r *itemVariantRepository) GetAllItemVariants(ctx context.Context, tenantID string) ([]model.ItemVariant, error) {
-	var variants []model.ItemVariant
-	err := r.db.WithContext(ctx).Preload("Item").Where("tenant_id = ?", tenantID).Find(&variants).Error
-	if err != nil {
-		return nil, err
-	}
-
-	return variants, nil
-}
-
-func (r *itemVariantRepository) GetItemVariants(ctx context.Context, tenantID string, name string) ([]model.ItemVariant, error) {
+func (r *itemVariantRepository) GetItemVariants(ctx context.Context, tenantID string, catalogItemID string, req dto.PaginationRequest) ([]model.ItemVariant, int64, error) {
 	var iv []model.ItemVariant
+	var total int64
+
 	// query default
-	query := r.db.WithContext(ctx).Preload("Tenant").Preload("Item").Where("tenant_id = ?", tenantID) // Preload Item sesuaikan dengan model item_variants.go
+	query := r.db.WithContext(ctx).
+		Model(model.ItemVariant{}).
+		Preload("Tenant").
+		Preload("Item").
+		Where("tenant_id = ? AND item_id = ?", tenantID, catalogItemID) // Preload Item sesuaikan dengan model item_variants.go
 
-	if name != "" {
-		// jika name nya tidak kosong, tambahkan query
-		query = query.Where("variant_name LIKE ?", "%"+name+"%")
+	/*
+		|--------------------------------------------------------------------------
+		| Search
+		|--------------------------------------------------------------------------
+	*/
+	if req.Search != "" {
+		like := "%" + req.Search + "%"
+		query = query.Where(`
+			variant_name LIKE ?
+			OR sku LIKE ?
+			OR barcode LIKE ?
+		`,
+			like,
+			like,
+			like,
+		)
 	}
 
-	// find data by name
-	err := query.Find(&iv).Error
-
-	if err != nil {
-		return nil, err
+	/*
+		|--------------------------------------------------------------------------
+		| Count
+		|--------------------------------------------------------------------------
+	*/
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
 	}
 
-	return iv, nil
+	/*
+		|--------------------------------------------------------------------------
+		| Sorting
+		|--------------------------------------------------------------------------
+		| Nanti akan kita whitelist.
+		|--------------------------------------------------------------------------
+	*/
+	query = query.Order(req.Sort + " " + req.Order)
+
+	/*
+		|--------------------------------------------------------------------------
+		| Pagination
+		|--------------------------------------------------------------------------
+	*/
+	offset := (req.Page - 1) * req.Limit
+
+	if err := query.
+		Offset(offset).
+		Limit(req.Limit).
+		Find(&iv).Error; err != nil {
+
+		return nil, 0, err
+	}
+
+	return iv, total, nil
 }
 
 func (r *itemVariantRepository) CountItemVariants(ctx context.Context, tenantID string) (int64, error) {

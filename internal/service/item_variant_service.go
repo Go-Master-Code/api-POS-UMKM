@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math"
 	"umkm-odod/helper"
 	"umkm-odod/internal/constants"
 	"umkm-odod/internal/dto"
@@ -13,7 +14,7 @@ import (
 
 // interface
 type ItemVariantService interface {
-	GetItemVariants(ctx context.Context, name string) ([]dto.ItemVariantResponse, error)
+	GetItemVariants(ctx context.Context, catalogItemID string, req dto.PaginationRequest) ([]dto.ItemVariantResponse, dto.PaginationResponse, error)
 	GetItemVariantByID(ctx context.Context, id string) (dto.ItemVariantResponse, error)
 	GetLowStockItem(ctx context.Context) ([]dto.LowStockResponse, error)
 	CountLowStockItem(ctx context.Context) (int64, error)
@@ -37,18 +38,30 @@ func NewItemVariantService(itemVariantRepo repository.ItemVariantRepository, sto
 }
 
 // struct method
-func (s *itemVariantService) GetItemVariants(ctx context.Context, name string) ([]dto.ItemVariantResponse, error) {
+func (s *itemVariantService) GetItemVariants(ctx context.Context, catalogItemID string, req dto.PaginationRequest) ([]dto.ItemVariantResponse, dto.PaginationResponse, error) {
 	// get tenant ID from jwt
 	tenantID := ctx.Value(constants.ContextTenantID).(string)
 
-	iv, err := s.itemVariantRepo.GetItemVariants(ctx, tenantID, name)
+	iv, total, err := s.itemVariantRepo.GetItemVariants(ctx, tenantID, catalogItemID, req)
 	if err != nil {
-		return nil, err
+		return nil, dto.PaginationResponse{}, err
 	}
 
 	// convert model to dto
 	ivDTO := helper.ConvertToDTOItemVariantPlural(iv)
-	return ivDTO, nil
+
+	// hitung total halaman
+	totalPages := int(math.Ceil(float64(total) / float64(req.Limit)))
+
+	// metadata pagination
+	meta := dto.PaginationResponse{
+		Page:       req.Page,
+		Limit:      req.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}
+
+	return ivDTO, meta, nil
 }
 
 func (s *itemVariantService) GetItemVariantByID(ctx context.Context, id string) (dto.ItemVariantResponse, error) {

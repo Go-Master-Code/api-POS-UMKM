@@ -23,16 +23,22 @@ func NewItemVariantHandler(service service.ItemVariantService) *ItemVariantHandl
 
 // struct method
 func (h *ItemVariantHandler) GetItemVariants(c *gin.Context) {
-	// tangkap query name
-	name := c.Query("name")
+	// Ambil catalog_item_id dari query par
+	catalogItemID := c.Query("catalog_item_id")
+	if catalogItemID == "" {
+		helper.ErrorResponse(c, "catalog_item_id is required", nil)
+		return
+	}
 
-	ivDTO, err := h.service.GetItemVariants(c.Request.Context(), name)
+	req := helper.GetPagination(c)
+
+	ivDTO, meta, err := h.service.GetItemVariants(c.Request.Context(), catalogItemID, req)
 	if err != nil {
 		helper.ErrorResponse(c, constants.ErrorGetData, err)
 		return
 	}
 
-	helper.SuccessResponse(c, constants.SuccessGetData, ivDTO)
+	helper.SuccessPaginationResponse(c, constants.SuccessGetData, ivDTO, meta)
 }
 
 func (h *ItemVariantHandler) GetItemVariantByID(c *gin.Context) {

@@ -14,5 +14,5 @@ func RegisterCatalogItemRoutes(rg *gin.RouterGroup, h *handler.CatalogItemHandle
 	rg.GET("/catalog_items/:id", h.GetCatalogItemByID)
 	rg.POST("/catalog_items", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.CreateCatalogItem)
 	rg.PUT("/catalog_items/:id", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.UpdateCatalogItem)
-	rg.DELETE("/catalog_items/:id", h.DeleteCatalogItem)
+	rg.DELETE("/catalog_items/:id", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.DeleteCatalogItem)
 }
