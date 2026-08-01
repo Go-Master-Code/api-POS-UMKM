@@ -10,6 +10,7 @@ import (
 	"umkm-odod/internal/repository"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 )
 
 // interface
@@ -25,15 +26,19 @@ type ItemVariantService interface {
 
 // struct implementasi
 type itemVariantService struct {
-	itemVariantRepo   repository.ItemVariantRepository
-	stockMovementRepo repository.StockMovementRepository
+	db                   *gorm.DB // pakai db karena akan dipakai untuk proses create item variant (proses harus berkesinambungan dengan create initial stock pada stock movement)
+	itemVariantRepo      repository.ItemVariantRepository
+	stockMovementRepo    repository.StockMovementRepository
+	stockMovementService StockMovementService // untuk eksekusi initial stock setelah item variant baru dibuat
 }
 
 // constructor
-func NewItemVariantService(itemVariantRepo repository.ItemVariantRepository, stockMovementRepo repository.StockMovementRepository) ItemVariantService {
+func NewItemVariantService(db *gorm.DB, itemVariantRepo repository.ItemVariantRepository, stockMovementRepo repository.StockMovementRepository, stockMovementService StockMovementService) ItemVariantService {
 	return &itemVariantService{
-		itemVariantRepo:   itemVariantRepo,
-		stockMovementRepo: stockMovementRepo,
+		db:                   db,
+		itemVariantRepo:      itemVariantRepo,
+		stockMovementRepo:    stockMovementRepo,
+		stockMovementService: stockMovementService,
 	}
 }
 
@@ -97,25 +102,69 @@ func (s *itemVariantService) CountLowStockItem(ctx context.Context) (int64, erro
 }
 
 func (s *itemVariantService) CreateItemVariant(ctx context.Context, req dto.CreateItemVariantRequest) (dto.ItemVariantResponse, error) {
+	// WAJIB pakai transaction (tx) agar data konsisten
+	// karena setelah ini proses harus berkesinambungan dengan input data ke stock movement (buat row initial stock)
+
+	// begin transaction
+	tx := s.db.Begin()
+
+	// cek apakah tx error
+	if tx.Error != nil {
+		return dto.ItemVariantResponse{}, tx.Error
+	}
+
+	// safety rollback jika panic
+	defer func() {
+		r := recover()
+
+		if r != nil {
+			tx.Rollback()
+		}
+	}()
+
 	// ambil tenantID dari context -> cek file middleware/auth_required.go
 	tenantID := ctx.Value(constants.ContextTenantID).(string)
 
 	// parsing dto ke model
 	iv := model.ItemVariant{
-		ID:          uuid.NewString(),
-		TenantID:    tenantID,
-		ItemID:      req.ItemID,
-		SKU:         req.SKU,
-		Barcode:     req.Barcode,
-		CostPrice:   req.CostPrice,
-		VariantName: req.VariantName,
-		IsActive:    req.IsActive,
+		ID:           uuid.NewString(),
+		TenantID:     tenantID,
+		ItemID:       req.ItemID,
+		SKU:          req.SKU,
+		Barcode:      req.Barcode,
+		CostPrice:    req.CostPrice,
+		SellingPrice: req.SellingPrice,
+		MinimumStock: req.MinimumStock,
+		VariantName:  req.VariantName,
+		IsActive:     req.IsActive,
 	}
 
-	err := s.itemVariantRepo.CreateItemVariant(ctx, &iv)
+	err := s.itemVariantRepo.CreateItemVariant(ctx, tx, &iv)
 	if err != nil {
 		return dto.ItemVariantResponse{}, err
 	}
+
+	// buat initial stock
+	initialReq := dto.CreateInitialStockRequest{
+		ItemVariantID: iv.ID,
+		Qty:           req.InitialStock,
+	}
+
+	// param pertama tidak dibutuhkan karena tidak akan di show / return ke frontend
+	_, err = s.stockMovementService.CreateInitialStock(ctx, initialReq)
+
+	if err != nil {
+		tx.Rollback()
+		return dto.ItemVariantResponse{}, err
+	}
+
+	// commit jika semua urutan request berhasil
+	err = tx.Commit().Error
+	if err != nil {
+		return dto.ItemVariantResponse{}, err
+	}
+
+	// setelah transaction berhasil, baru get data item variant dan taruh di response json
 
 	// get data by id
 	newIV, err := s.itemVariantRepo.GetItemVariantByID(ctx, tenantID, iv.ID)

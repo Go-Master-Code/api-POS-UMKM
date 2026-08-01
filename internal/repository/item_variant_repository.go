@@ -13,7 +13,7 @@ type ItemVariantRepository interface {
 	GetItemVariants(ctx context.Context, tenantID string, catalogItemID string, req dto.PaginationRequest) ([]model.ItemVariant, int64, error)
 	CountItemVariants(ctx context.Context, tenantID string) (int64, error) // untuk summary dashboard
 	GetItemVariantByID(ctx context.Context, tenantID string, id string) (*model.ItemVariant, error)
-	CreateItemVariant(ctx context.Context, iv *model.ItemVariant) error
+	CreateItemVariant(ctx context.Context, tx *gorm.DB, iv *model.ItemVariant) error
 	UpdateItemVariant(ctx context.Context, tenantID string, id string, updateMap map[string]any) error
 	DeleteItemVariant(ctx context.Context, tenantID string, id string) error
 	// ambil item yang <= low stock
@@ -122,7 +122,7 @@ func (r *itemVariantRepository) GetItemVariantByID(ctx context.Context, tenantID
 	return &iv, nil
 }
 
-func (r *itemVariantRepository) CreateItemVariant(ctx context.Context, iv *model.ItemVariant) error {
+func (r *itemVariantRepository) CreateItemVariant(ctx context.Context, tx *gorm.DB, iv *model.ItemVariant) error {
 	return r.db.WithContext(ctx).Create(iv).Error
 }
 

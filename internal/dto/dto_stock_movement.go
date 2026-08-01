@@ -42,3 +42,9 @@ type CurrentStockResponse struct {
 	ItemVariantID string  `json:"item_variant_id"`
 	CurrentStock  float64 `json:"current_stock"`
 }
+
+// create initial stock untuk item variant yang baru dibuat
+type CreateInitialStockRequest struct {
+	ItemVariantID string  `json:"item_variant_id"`
+	Qty           float64 `json:"qty"`
+}

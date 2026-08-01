@@ -9,6 +9,8 @@ const ( // untuk stock movement
 	MovementOpening        = "OPENING"
 	MovementWaste          = "WASTE"
 	MovementPurchaseReturn = "PURCHASE RETURN"
+	StockMovementInitial   = "INITIAL STOCK"
+	ReferenceItemVariant   = "ITEM_VARIANT"
 )
 
 const (

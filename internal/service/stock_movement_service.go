@@ -22,6 +22,8 @@ type StockMovementService interface {
 	GetCurrentStock(ctx context.Context, itemVariantID string) (dto.CurrentStockResponse, error)
 	CreateAdjustment(ctx context.Context, req dto.CreateStockAdjustmentRequest) (dto.StockMovementResponse, error)
 	GetStockCard(ctx context.Context, itemVariantID string) ([]dto.StockCardResponse, error)
+	// create initial stock saat item variant baru dibuat
+	CreateInitialStock(ctx context.Context, req dto.CreateInitialStockRequest) (dto.StockMovementResponse, error)
 }
 
 // struct implementasi
@@ -387,4 +389,77 @@ func (s *stockMovementService) GetStockCard(ctx context.Context, itemVariantID s
 		})
 	}
 	return stockCards, nil
+}
+
+func (s *stockMovementService) CreateInitialStock(ctx context.Context, req dto.CreateInitialStockRequest) (dto.StockMovementResponse, error) {
+	// begin transaction
+	tx := s.db.Begin()
+
+	// cek apakah tx error
+	if tx.Error != nil {
+		return dto.StockMovementResponse{}, tx.Error
+	}
+
+	// safety rollback jika panic
+	defer func() {
+		r := recover()
+
+		if r != nil {
+			tx.Rollback()
+		}
+	}()
+
+	// ambil tenant ID dan user ID dari JWT
+	tenantID := ctx.Value(constants.ContextTenantID).(string)
+	userID := ctx.Value(constants.ContextUserID).(string)
+
+	// get item variant
+	itemVariant, err := s.itemVariantRepo.GetItemVariantByID(ctx, tenantID, req.ItemVariantID)
+	if err != nil {
+		tx.Rollback() // wajib rollback kalau ada error pada transaction
+		return dto.StockMovementResponse{}, err
+	}
+
+	// ========================================
+	// JENIS MOVEMENT = INITIAL STOCK, JADI BERNILAI POSITIF
+	// ========================================
+
+	// create stock movement
+	movement := model.StockMovement{
+		ID:            uuid.NewString(),
+		TenantID:      tenantID,
+		ItemVariantID: itemVariant.ID,
+		MovementType:  constants.StockMovementInitial,
+		Qty:           req.Qty,
+		ReferenceType: constants.ReferenceItemVariant,
+		ReferenceID:   itemVariant.ID,
+		Notes:         "Initial Stock",
+		CreatedBy:     userID,
+	}
+
+	// save data movement
+	err = s.stockMovementRepo.CreateMovement(ctx, tx, &movement)
+
+	if err != nil {
+		tx.Rollback() // rollback tiap kali ada kasus error
+		return dto.StockMovementResponse{}, err
+	}
+
+	// commit transaction
+	err = tx.Commit().Error
+	if err != nil {
+		return dto.StockMovementResponse{}, err
+	}
+
+	// ========================================
+	// AMBIL DATA FINAL DENGAN PRELOAD
+	// ========================================
+	newMovement, err := s.stockMovementRepo.GetMovementByID(ctx, tenantID, movement.ID)
+	if err != nil {
+		return dto.StockMovementResponse{}, err
+	}
+
+	// convert movement to dto
+	movementDTO := helper.ConvertToDTOStockMovementSingle(newMovement)
+	return movementDTO, nil
 }

@@ -26,7 +26,8 @@ type CreateItemVariantRequest struct {
 	SKU          string  `json:"sku" binding:"required,min=3,max=100"`
 	Barcode      string  `json:"barcode" binding:"omitempty,max=100"` // tidak required
 	VariantName  string  `json:"variant_name" binding:"required,min=3,max=150"`
-	MinimumStock float64 `json:"minimum_stock" binding:"gte=0"`       // min 0
+	MinimumStock float64 `json:"minimum_stock" binding:"gte=0"` // min 0
+	InitialStock float64 `json:"initial_stock" binding:"gte=0"`
 	CostPrice    float64 `json:"cost_price" binding:"required,gte=0"` // gte = nilai min = 0
 	SellingPrice float64 `json:"selling_price" binding:"required,gte=0"`
 	IsActive     bool    `json:"is_active"`
