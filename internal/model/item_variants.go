@@ -22,6 +22,14 @@ type ItemVariant struct {
 	CreatedAt    time.Time      `gorm:"column:created_at;autoCreateTime"`
 	UpdatedAt    time.Time      `gorm:"column:updated_at;autoUpdateTime"`
 	DeletedAt    gorm.DeletedAt `gorm:"column:deleted_at"`
+	// ---------------------------------------------------------
+	// Current Stock
+	// ---------------------------------------------------------
+	// BUKAN kolom di item_variants.
+	// Nilainya dihitung dari SUM(stock_movements.qty).
+	// gorm:"->" = read-only, tidak digunakan saat INSERT/UPDATE.
+	CurrentStock float64 `json:"current_stock" gorm:"column:current_stock;->"`
+	// Penting: jangan membuat kolom current_stock di MySQL. Field ini hanya untuk menampung hasil query.
 }
 
 func (ItemVariant) TableName() string {

@@ -196,8 +196,14 @@ func (s *itemVariantService) UpdateItemVariant(ctx context.Context, id string, r
 	if req.VariantName != nil {
 		updateMap["variant_name"] = req.VariantName
 	}
+	if req.MinimumStock != nil {
+		updateMap["minimum_stock"] = req.MinimumStock
+	}
 	if req.CostPrice != nil {
 		updateMap["cost_price"] = req.CostPrice
+	}
+	if req.SellingPrice != nil {
+		updateMap["selling_price"] = req.SellingPrice
 	}
 	if req.IsActive != nil {
 		updateMap["is_active"] = req.IsActive

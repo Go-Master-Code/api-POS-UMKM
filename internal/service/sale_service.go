@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"time"
 	"umkm-odod/helper"
 	"umkm-odod/internal/constants"
@@ -98,17 +99,20 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 	// BEGIN DATABASE TRANSACTION
 	// ========================================
 
+	log.Println("SALE DEBUG 01 - BEGIN")
 	tx := s.db.Begin() // begin transaction
 
 	if tx.Error != nil { // cek apakah gagal begin transaction
 		return dto.SaleResponse{}, tx.Error
 	}
+	log.Println("SALE DEBUG 02 - BEGIN SUCCESS")
 
 	// safety rollback jika panic
 	defer func() {
 		r := recover()
 		if r != nil {
 			tx.Rollback()
+			panic(r)
 		}
 	}()
 
@@ -151,28 +155,40 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 	// ========================================
 	// LOOP SALE ITEMS
 	// ========================================
-	var grandTotal float64
 	for _, item := range req.Items { // iterasi ke sale items -> lihat format dtoCreateSaleRequest
-		// ========================================
+		// ----------------------------------------
 		// AMBIL ITEM VARIANT DARI DATABASE
-		// harga harus trusted dari DB
-		// ========================================
-		variant, err := s.itemVariantRepo.GetItemVariantByID(ctx, tenantID, item.ItemVariantID)
+		// ----------------------------------------
+		// Harga dan informasi item harus trusted
+		// dari database, bukan dari frontend.
+		variant, err := s.itemVariantRepo.GetItemVariantByIDForUpdate(ctx, tx, tenantID, item.ItemVariantID)
 		if err != nil {
 			tx.Rollback()
 			return dto.SaleResponse{}, err
+		}
+		log.Println("SALE DEBUG 03 - VARIANT LOCKED:", variant.ID)
+
+		// ----------------------------------------
+		// VALIDASI QTY
+		// ----------------------------------------
+		if item.Qty <= 0 {
+			tx.Rollback()
+			return dto.SaleResponse{}, errors.New(
+				"quantity must be greater than zero",
+			)
 		}
 
 		// ========================================
 		// VALIDASI STOK
 		// ========================================
 
-		currentStock, err := s.stockMovementRepo.GetCurrentStock(
+		currentStock, err := s.stockMovementRepo.GetCurrentStockForUpdate( // wajib pakai param tx dan jalankan di repo pakai tx, bukan r.db
 			ctx,
 			tenantID,
 			tx,
 			variant.ID,
 		)
+		log.Println("SALE DEBUG 04 - CURRENT STOCK:", currentStock)
 
 		if err != nil {
 			tx.Rollback()
@@ -186,11 +202,31 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 				errors.New("insufficient stock")
 		}
 
+		// ----------------------------------------
+		// VALIDASI DISCOUNT ITEM
+		// ----------------------------------------
+
+		grossSubtotal := item.Qty * variant.SellingPrice
+
+		if item.DiscountAmount < 0 { // diskon negatif
+			tx.Rollback()
+			return dto.SaleResponse{}, errors.New(
+				"item discount cannot be negative",
+			)
+		}
+
+		if item.DiscountAmount > grossSubtotal { // diskon tidak boleh > subtotal
+			tx.Rollback()
+			return dto.SaleResponse{}, errors.New(
+				"item discount cannot exceed item subtotal",
+			)
+		}
+
 		// ========================================
-		// HITUNG SUBTOTAL
+		// HITUNG SUBTOTAL ITEM
 		// ========================================
 
-		subtotal := (item.Qty * variant.SellingPrice) - item.DiscountAmount
+		subtotal := grossSubtotal - item.DiscountAmount
 
 		// ========================================
 		// CREATE SALE ITEM
@@ -219,6 +255,8 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 			return dto.SaleResponse{}, err
 		}
 
+		log.Println("SALE DEBUG 05 - SALE ITEM CREATED")
+
 		// ========================================
 		// CREATE STOCK MOVEMENT
 		// stok keluar = qty negatif
@@ -236,6 +274,7 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 			CreatedBy:     userID,
 		}
 
+		log.Println("SALE DEBUG 06A - BEFORE CREATE MOVEMENT")
 		// simpan stock movement
 		err = s.stockMovementRepo.CreateMovement(ctx, tx, &movement)
 
@@ -243,39 +282,59 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 			tx.Rollback()
 			return dto.SaleResponse{}, err
 		}
+		log.Println("SALE DEBUG 06B - AFTER CREATE MOVEMENT")
 
 		// ========================================
-		// TAMBAH GRAND TOTAL
+		// TAMBAHKAN SUBTOTAL ITEM KE SALE
 		// ========================================
-
-		grandTotal += subtotal
-
 		// increment sale.subtotal
 		sale.Subtotal += subtotal
 	}
 
 	// ========================================
+	// VALIDASI SALE DISCOUNT
+	// ========================================
+
+	if sale.DiscountAmount < 0 {
+		tx.Rollback()
+		return dto.SaleResponse{}, errors.New(
+			"sale discount cannot be negative",
+		)
+	}
+
+	if sale.DiscountAmount > sale.Subtotal {
+		tx.Rollback()
+		return dto.SaleResponse{}, errors.New(
+			"sale discount cannot exceed subtotal",
+		)
+	}
+
+	// ========================================
+	// HITUNG TAX
+	// ========================================
+	//
+	// Untuk sementara masih 10%.
+	// Nanti kita pindahkan ke tenant/settings
+	// jika memang dibutuhkan.
+
+	taxableAmount := sale.Subtotal - sale.DiscountAmount
+	sale.TaxAmount = taxableAmount / 10 // skenario tax=10%
+
+	// ========================================
 	// HITUNG FINAL GRAND TOTAL
 	// ========================================
 
-	// Hitung tax, misalnya 10% dari grand total
-	sale.TaxAmount = grandTotal / 10
-
 	// update grand total setelah diskon ditambah pajak
-	sale.GrandTotal = sale.Subtotal - sale.DiscountAmount + sale.TaxAmount
+	sale.GrandTotal = taxableAmount + sale.TaxAmount
 
-	// ========================================
-	// UPDATE SUBTOTAL, TAX AMOUNT dan GRAND TOTAL KE DATABASE pakai method Updates via var map
-	// ========================================
-
-	// subtotal = total agregat dari masing-masing row item (harga * qty) tiap row
 	err = tx.
 		WithContext(ctx).
 		Model(&sale).
 		Updates(map[string]any{
-			"subtotal":    sale.Subtotal,
-			"tax_amount":  sale.TaxAmount,
-			"grand_total": sale.GrandTotal,
+			"subtotal":        sale.Subtotal,
+			"discount_amount": sale.DiscountAmount,
+			"tax_amount":      sale.TaxAmount,
+			"grand_total":     sale.GrandTotal,
 		}).Error
 
 	if err != nil {
@@ -287,13 +346,21 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 	// COMMIT TRANSACTION
 	// ========================================
 
+	log.Println("SALE DEBUG 07 - BEFORE COMMIT")
 	err = tx.Commit().Error
 
 	if err != nil {
 		return dto.SaleResponse{}, err
 	}
+	log.Println("SALE DEBUG 08 - COMMIT SUCCESS")
 
-	// setelah selesai commit transaction, eksekusi service CreateActivityLog()
+	// ========================================
+	// ACTIVITY LOG
+	// ========================================
+	//
+	// Transaction sudah COMMIT.
+	// Kegagalan activity log tidak boleh membuat
+	// frontend menganggap transaksi gagal.
 	err = s.activityLogService.CreateActivityLog( // ignore error
 		ctx,
 		"SALES",
@@ -303,13 +370,17 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 		sale.InvoiceNumber, // yang mudah dipahami manusia misalnya P-RETUR-1781140525
 	)
 
-	// error log activity
+	// error log activity jgn kirim error ke client
 	if err != nil {
-		return dto.SaleResponse{}, err
+		log.Println("Error log: ", err)
 	}
 
 	// get data sale by id untuk preload semua relasi
 	newSale, err := s.saleRepo.GetSaleByID(ctx, tenantID, sale.ID)
+	if err != nil {
+		return dto.SaleResponse{}, err
+	}
+	log.Println("SALE DEBUG 09 - AFTER COMMIT")
 
 	// ========================================
 	// RESPONSE DTO

@@ -15,6 +15,7 @@ type ItemVariantResponse struct {
 	MinimumStock float64 `json:"minimum_stock"`
 	CostPrice    float64 `json:"cost_price"`
 	SellingPrice float64 `json:"selling_price"`
+	CurrentStock float64 `json:"current_stock"`
 	IsActive     bool    `json:"is_active"`
 }
 

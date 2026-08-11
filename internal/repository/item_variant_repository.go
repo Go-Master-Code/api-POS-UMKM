@@ -6,6 +6,7 @@ import (
 	"umkm-odod/internal/model"
 
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 // interface
@@ -13,6 +14,8 @@ type ItemVariantRepository interface {
 	GetItemVariants(ctx context.Context, tenantID string, catalogItemID string, req dto.PaginationRequest) ([]model.ItemVariant, int64, error)
 	CountItemVariants(ctx context.Context, tenantID string) (int64, error) // untuk summary dashboard
 	GetItemVariantByID(ctx context.Context, tenantID string, id string) (*model.ItemVariant, error)
+	// get item variant dengan metode locking
+	GetItemVariantByIDForUpdate(ctx context.Context, tx *gorm.DB, tenantID string, id string) (*model.ItemVariant, error)
 	CreateItemVariant(ctx context.Context, tx *gorm.DB, iv *model.ItemVariant) error
 	UpdateItemVariant(ctx context.Context, tenantID string, id string, updateMap map[string]any) error
 	DeleteItemVariant(ctx context.Context, tenantID string, id string) error
@@ -39,39 +42,84 @@ func (r *itemVariantRepository) GetItemVariants(ctx context.Context, tenantID st
 	var iv []model.ItemVariant
 	var total int64
 
+	// =========================================================================
+	// QUERY DEFAULT
+	// =========================================================================
+	//
+	// current_stock dihitung langsung dari stock_movements.
+	//
+	// COALESCE digunakan agar variant yang belum memiliki stock movement
+	// tetap mendapatkan nilai 0, bukan NULL.
+	//
+	// =========================================================================
+
 	// query default
 	query := r.db.WithContext(ctx).
 		Model(model.ItemVariant{}).
 		Preload("Tenant").
 		Preload("Item").
+		Preload("Item.CatalogCategory").
 		Where("tenant_id = ? AND item_id = ?", tenantID, catalogItemID) // Preload Item sesuaikan dengan model item_variants.go
 
 	/*
 		|--------------------------------------------------------------------------
-		| Search
+		| Search -> Kelompokkan kondisi OR dengan tanda kurung:
 		|--------------------------------------------------------------------------
 	*/
 	if req.Search != "" {
 		like := "%" + req.Search + "%"
-		query = query.Where(`
-			variant_name LIKE ?
-			OR sku LIKE ?
-			OR barcode LIKE ?
-		`,
+		query = query.Where(
+			`(
+				variant_name LIKE ?
+				OR sku LIKE ?
+				OR barcode LIKE ?
+			)`,
 			like,
 			like,
 			like,
 		)
 	}
 
-	/*
-		|--------------------------------------------------------------------------
-		| Count
-		|--------------------------------------------------------------------------
-	*/
+	// =========================================================================
+	// COUNT
+	// =========================================================================
+	//
+	// Count dilakukan sebelum Select current_stock.
+	// Jadi total record tetap menghitung jumlah Item Variant,
+	// bukan jumlah stock movement.
+	//
+	// =========================================================================
+
 	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
+
+	// =========================================================================
+	// CURRENT STOCK
+	// =========================================================================
+	//
+	// Hitung total stock dari seluruh movement variant.
+	//
+	// Contoh:
+	//
+	// INITIAL     +10
+	// PURCHASE    +20
+	// SALE         -5
+	// ADJUSTMENT   -2
+	// ----------------
+	// CURRENT      23
+	//
+	// =========================================================================
+
+	query = query.Select(`
+		item_variants.*,
+		(
+			SELECT COALESCE(SUM(sm.qty), 0)
+			FROM stock_movements sm
+			WHERE sm.item_variant_id = item_variants.id
+			  AND sm.tenant_id = item_variants.tenant_id
+		) AS current_stock
+	`)
 
 	/*
 		|--------------------------------------------------------------------------
@@ -115,6 +163,26 @@ func (r *itemVariantRepository) GetItemVariantByID(ctx context.Context, tenantID
 		Preload("Item").
 		Preload("Item.CatalogCategory"). // preload nested relation dari Item (untuk dapat kategori barang, misalnya snack, makanan, atau minuman)
 		Where("tenant_id = ?", tenantID).First(&iv, "id = ?", id).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return &iv, nil
+}
+
+func (r *itemVariantRepository) GetItemVariantByIDForUpdate(ctx context.Context, tx *gorm.DB, tenantID string, id string) (*model.ItemVariant, error) {
+	var iv model.ItemVariant
+	err := tx.
+		WithContext(ctx). // wajib pakai tx, bukan r.db karena harus dalam satu jalur transaction dengan sales
+		Preload("Tenant").
+		Preload("Item").
+		Preload("Item.CatalogCategory"). // preload nested relation dari Item (untuk dapat kategori barang, misalnya snack, makanan, atau minuman)
+		Clauses(clause.Locking{
+			Strength: "UPDATE",
+		}).
+		Where("tenant_id = ? AND id = ?", tenantID, id).
+		First(&iv).
+		Error
 	if err != nil {
 		return nil, err
 	}
