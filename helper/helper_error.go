@@ -14,10 +14,14 @@ type AllErrors struct {
 }
 
 func ErrorResponse(c *gin.Context, message string, err error) {
+	errorMessage := ""
+	if err != nil {
+		errorMessage = err.Error()
+	}
 	c.JSON(http.StatusInternalServerError, AllErrors{
 		Code:    http.StatusInternalServerError,
 		Message: message,
-		Error:   err.Error(),
+		Error:   errorMessage,
 	})
 }
 

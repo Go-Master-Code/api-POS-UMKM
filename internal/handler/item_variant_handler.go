@@ -23,12 +23,11 @@ func NewItemVariantHandler(service service.ItemVariantService) *ItemVariantHandl
 
 // struct method
 func (h *ItemVariantHandler) GetItemVariants(c *gin.Context) {
-	// Ambil catalog_item_id dari query par
+	// Ambil catalog_item_id dari query par: boleh ada isinya ataupun tidak
+	// jika catalog_item_id = "" maka akan tampil semua variant
+	// jika catalog_item_id tidak kosong maka akan dijadikan parameter filter di repo
+
 	catalogItemID := c.Query("catalog_item_id")
-	if catalogItemID == "" {
-		helper.ErrorResponse(c, "catalog_item_id is required", nil)
-		return
-	}
 
 	req := helper.GetPagination(c)
 

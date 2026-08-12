@@ -46,21 +46,25 @@ func (r *itemVariantRepository) GetItemVariants(ctx context.Context, tenantID st
 	// QUERY DEFAULT
 	// =========================================================================
 	//
-	// current_stock dihitung langsung dari stock_movements.
+	// Tenant ID selalu digunakan untuk menjaga isolasi data antar tenant.
 	//
-	// COALESCE digunakan agar variant yang belum memiliki stock movement
-	// tetap mendapatkan nilai 0, bukan NULL.
+	// catalogItemID bersifat optional:
+	//   - Jika diisi  → filter variant berdasarkan catalog item.
+	//   - Jika kosong → ambil seluruh variant milik tenant.
 	//
 	// =========================================================================
 
-	// query default
 	query := r.db.WithContext(ctx).
 		Model(model.ItemVariant{}).
 		Preload("Tenant").
 		Preload("Item").
 		Preload("Item.CatalogCategory").
-		Where("tenant_id = ? AND item_id = ?", tenantID, catalogItemID) // Preload Item sesuaikan dengan model item_variants.go
+		Where("tenant_id = ?", tenantID) // Preload Item sesuaikan dengan model item_variants.go
 
+	// filter berdasarkan Catalog Item hanya jika parameter diberikan
+	if catalogItemID != "" {
+		query = query.Where("item_id = ?", catalogItemID)
+	}
 	/*
 		|--------------------------------------------------------------------------
 		| Search -> Kelompokkan kondisi OR dengan tanda kurung:
