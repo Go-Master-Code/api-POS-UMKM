@@ -16,6 +16,7 @@ type SaleResponse struct {
 	GrandTotal     float64            `json:"grand_total"`
 	PaymentMethod  string             `json:"payment_method"`
 	PaymentStatus  string             `json:"payment_status"` // berguna untuk filter mana yang PAID UNPAID PARTIAL VOID REFUNDED
+	AmountReceived float64            `json:"amount_received"`
 	Notes          string             `json:"notes"`
 	CreatedAt      time.Time          `json:"created_at"`
 	Items          []SaleItemResponse `json:"items"` // tampilkan sale item sebagai nested slice
@@ -28,10 +29,11 @@ type CreateSaleRequest struct {
 	// TaxAmount      float64 `json:"tax_amount" binding:"required"` idealnya dihitung oleh backend juga
 	// Subtotal       float64 `json:"subtotal" binding:"required"` best practice: tidak dikirim oleh frontend, harus dihitung backend
 	// GrandTotal     float64 `json:"grand_total" binding:"required"` best practice: tidak dikirim oleh frontend, harus dihitung backend
-	CustomerName   string                        `json:"customer_name" binding:"omitempty,max=150"`
-	DiscountAmount float64                       `json:"discount_amount" binding:"gte=0"`
-	PaymentMethod  string                        `json:"payment_method" binding:"required,oneof=CASH QRIS TRANSFER DEBIT CREDIT"`   // tipe enum
-	PaymentStatus  string                        `json:"payment_status" binding:"required,oneof=PAID UNPAID PARTIAL VOID REFUNDED"` // berguna untuk filter mana yang PAID UNPAID PARTIAL VOID REFUNDED
+	CustomerName   string  `json:"customer_name" binding:"omitempty,max=150"`
+	DiscountAmount float64 `json:"discount_amount" binding:"gte=0"`
+	PaymentMethod  string  `json:"payment_method" binding:"required,oneof=CASH QRIS TRANSFER DEBIT KREDIT"` // tipe enum
+	// PaymentStatus  string                        `json:"payment_status" binding:"required,oneof=PAID UNPAID PARTIAL VOID REFUNDED"` // berguna untuk filter mana yang PAID UNPAID PARTIAL VOID REFUNDED
+	AmountReceived float64                       `json:"amount_received" binding:"gte=0"`
 	Notes          string                        `json:"notes" binding:"omitempty,max=500"`
 	Items          []CreateSaleItemDetailRequest `json:"items" binding:"required,min=1,dive"` // tabel detil sales berisi item yang dijual
 }

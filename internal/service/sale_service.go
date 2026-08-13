@@ -141,8 +141,9 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 		CashierID:      userID,
 		DiscountAmount: req.DiscountAmount,
 		PaymentMethod:  req.PaymentMethod,
-		PaymentStatus:  req.PaymentStatus,
-		Notes:          req.Notes,
+		AmountReceived: req.AmountReceived,
+		// PaymentStatus:  req.PaymentStatus, ditentukan nanti setelah grandTotal selesai dihitung
+		Notes: req.Notes,
 	}
 
 	// simpan sale header / data master
@@ -243,8 +244,9 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 			SKUSnapshot:         variant.SKU,
 			Qty:                 item.Qty,
 			UnitPrice:           variant.SellingPrice,
-			DiscountAmount:      item.DiscountAmount,
-			Subtotal:            subtotal,
+			// DiscountAmount:      item.DiscountAmount,
+			DiscountAmount: 0, // sementara dibuat 0 diskon untuk setiap sale item karena diskon hanya ada di master sales
+			Subtotal:       subtotal,
 		}
 
 		// simpan sale item
@@ -327,6 +329,39 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 	// update grand total setelah diskon ditambah pajak
 	sale.GrandTotal = taxableAmount + sale.TaxAmount
 
+	// ========================================
+	// VALIDASI PAYMENT
+	// ========================================
+	switch sale.PaymentMethod {
+	case constants.PaymentMethodCash:
+		if sale.PaymentMethod == constants.PaymentMethodCash {
+			if req.AmountReceived < sale.GrandTotal {
+				tx.Rollback()
+
+				return dto.SaleResponse{}, errors.New("amount received is less than grand total")
+			}
+		}
+
+		// pembayaran cash berhasil
+		sale.PaymentStatus = constants.PaymentStatusPaid
+
+	case constants.PaymentMethodQRIS,
+		constants.PaymentMethodTransfer,
+		constants.PaymentMethodDebit,
+		constants.PaymentMethodKredit:
+
+		// Untuk MVP, pembayaran dianggap sudah dikonfirmasi di kasir
+		sale.AmountReceived = sale.GrandTotal
+		sale.PaymentStatus = constants.PaymentStatusPaid
+
+	default:
+		tx.Rollback()
+
+		return dto.SaleResponse{}, errors.New("invalid payment method")
+	}
+
+	// validasi nominal bayar jika metode pembayaran CASH
+
 	err = tx.
 		WithContext(ctx).
 		Model(&sale).
@@ -335,6 +370,8 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 			"discount_amount": sale.DiscountAmount,
 			"tax_amount":      sale.TaxAmount,
 			"grand_total":     sale.GrandTotal,
+			"payment_status":  sale.PaymentStatus,
+			"amount_received": sale.AmountReceived,
 		}).Error
 
 	if err != nil {

@@ -14,6 +14,7 @@ type Sale struct {
 	DiscountAmount float64    `json:"discount_amount" gorm:"type:decimal(18,2);not null"`
 	TaxAmount      float64    `json:"tax_amount" gorm:"type:decimal(18,2);not null"`
 	GrandTotal     float64    `json:"grand_total" gorm:"type:decimal(18,2);not null"`
+	AmountReceived float64    `json:"amount_received" gorm:"type:decimal(18,2);not null"`
 	PaymentMethod  string     `json:"payment_method" gorm:"type:varchar(10);not null,index"`
 	PaymentStatus  string     `json:"payment_status" gorm:"type:varchar(50);not null;index"` // berguna untuk filter mana yang PAID UNPAID PARTIAL VOID REFUNDED
 	Notes          string     `json:"notes" gorm:"type:text"`

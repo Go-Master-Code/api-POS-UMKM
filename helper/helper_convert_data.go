@@ -290,6 +290,7 @@ func ConvertToDTOSaleSingle(sale *model.Sale) dto.SaleResponse {
 		GrandTotal:     sale.GrandTotal,
 		PaymentMethod:  sale.PaymentMethod,
 		PaymentStatus:  sale.PaymentStatus,
+		AmountReceived: sale.AmountReceived,
 		Notes:          sale.Notes,
 		CreatedAt:      sale.CreatedAt,
 		Items:          saleItemDTO,
