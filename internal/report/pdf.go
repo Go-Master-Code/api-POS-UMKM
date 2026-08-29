@@ -17,3 +17,18 @@ func NewPDF() *fpdf.Fpdf {
 
 	return pdf
 }
+
+// newReceiptPDF membuat instance PDF dengan konfigurasi lebar kertas 80 mm
+func NewReceiptPDF() *fpdf.Fpdf {
+	pdf := fpdf.New("P", "mm", "", "")
+
+	pdf.AddPageFormat(
+		"P",
+		fpdf.SizeType{
+			Wd: 80,  // lebar 80 mm
+			Ht: 200, // walau height 200 mm, printer hanya akan print bagian kertas yang ada isi teksnya
+		},
+	)
+
+	return pdf
+}

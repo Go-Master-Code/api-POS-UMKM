@@ -281,7 +281,7 @@ func ConvertToDTOSaleSingle(sale *model.Sale) dto.SaleResponse {
 		TenantID:       sale.TenantID,
 		TenantName:     sale.Tenant.Name,
 		InvoiceNumber:  sale.InvoiceNumber,
-		CustomerName:   sale.CustomerName,
+		CustomerName:   sale.Customer.Name,
 		CashierID:      sale.CashierID,
 		CashierName:    sale.Cashier.FullName,
 		Subtotal:       sale.Subtotal,
@@ -453,6 +453,27 @@ func ConvertToDTOSupplierSingle(supplier *model.Supplier) dto.SupplierResponse {
 		IsActive: supplier.IsActive,
 	}
 	return supplierDTO
+}
+
+func ConvertToDTOCustomerSingle(customer *model.Customer) dto.CustomerResponse {
+	customerDTO := dto.CustomerResponse{
+		ID:         customer.ID,
+		TenantID:   customer.TenantID,
+		TenantName: customer.Tenant.Name,
+		Name:       customer.Name,
+		Phone:      *customer.Phone,
+		IsActive:   customer.IsActive,
+		CreatedAt:  customer.CreatedAt,
+	}
+	return customerDTO
+}
+
+func ConvertToDTOCustomerPlural(customers []model.Customer) []dto.CustomerResponse {
+	var customersDTO []dto.CustomerResponse
+	for _, c := range customers {
+		customersDTO = append(customersDTO, ConvertToDTOCustomerSingle(&c))
+	}
+	return customersDTO
 }
 
 func ConvertToDTOActivityLogPlural(logs []model.ActivityLog) []dto.ActivityLogResponse {

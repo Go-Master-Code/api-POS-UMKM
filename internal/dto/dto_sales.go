@@ -29,10 +29,11 @@ type CreateSaleRequest struct {
 	// TaxAmount      float64 `json:"tax_amount" binding:"required"` idealnya dihitung oleh backend juga
 	// Subtotal       float64 `json:"subtotal" binding:"required"` best practice: tidak dikirim oleh frontend, harus dihitung backend
 	// GrandTotal     float64 `json:"grand_total" binding:"required"` best practice: tidak dikirim oleh frontend, harus dihitung backend
-	CustomerName   string  `json:"customer_name" binding:"omitempty,max=150"`
-	DiscountAmount float64 `json:"discount_amount" binding:"gte=0"`
-	PaymentMethod  string  `json:"payment_method" binding:"required,oneof=CASH QRIS TRANSFER DEBIT KREDIT"` // tipe enum
-	// PaymentStatus  string                        `json:"payment_status" binding:"required,oneof=PAID UNPAID PARTIAL VOID REFUNDED"` // berguna untuk filter mana yang PAID UNPAID PARTIAL VOID REFUNDED
+	// CustomerName   string                        `json:"customer_name" binding:"omitempty,max=150"`
+	CustomerID     *string                       `json:"customer_id" binding:"omitempty"`
+	DiscountAmount float64                       `json:"discount_amount" binding:"gte=0"`
+	PaymentMethod  string                        `json:"payment_method" binding:"required,oneof=CASH QRIS TRANSFER DEBIT KREDIT"`   // tipe enum
+	PaymentStatus  string                        `json:"payment_status" binding:"required,oneof=PAID UNPAID PARTIAL VOID REFUNDED"` // berguna untuk filter mana yang PAID UNPAID PARTIAL VOID REFUNDED
 	AmountReceived float64                       `json:"amount_received" binding:"gte=0"`
 	Notes          string                        `json:"notes" binding:"omitempty,max=500"`
 	Items          []CreateSaleItemDetailRequest `json:"items" binding:"required,min=1,dive"` // tabel detil sales berisi item yang dijual
@@ -72,4 +73,6 @@ type GetAllSalesQuery struct {
 	Limit         int    `form:"limit"`          // jumlah data per halaman
 	Search        string `form:"search"`         // untuk search INV atau customer
 	PaymentStatus string `form:"payment_status"` // filter payment status
+	Sort          string `form:"sort"`
+	Order         string `form:"order"`
 }

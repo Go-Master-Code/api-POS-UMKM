@@ -134,10 +134,11 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 	// CREATE SALE HEADER -> master sale
 	// ========================================
 	sale := model.Sale{
-		ID:             uuid.NewString(),
-		TenantID:       tenantID,
-		InvoiceNumber:  invoiceNumber,
-		CustomerName:   req.CustomerName,
+		ID:            uuid.NewString(),
+		TenantID:      tenantID,
+		InvoiceNumber: invoiceNumber,
+		// CustomerName:   req.CustomerName,
+		CustomerID:     req.CustomerID,
 		CashierID:      userID,
 		DiscountAmount: req.DiscountAmount,
 		PaymentMethod:  req.PaymentMethod,
@@ -332,35 +333,78 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 	// ========================================
 	// VALIDASI PAYMENT
 	// ========================================
-	switch sale.PaymentMethod {
-	case constants.PaymentMethodCash:
-		if sale.PaymentMethod == constants.PaymentMethodCash {
+	log.Println("PAYMENT DEBUG - STATUS:", sale.PaymentStatus)
+	log.Println("PAYMENT DEBUG - METHOD:", sale.PaymentMethod)
+	log.Println("PAYMENT DEBUG - AMOUNT RECEIVED:", req.AmountReceived)
+	log.Println("PAYMENT DEBUG - GRAND TOTAL:", sale.GrandTotal)
+
+	switch req.PaymentStatus {
+	case constants.PaymentStatusPaid:
+		// ========================================
+		// PAID
+		// ========================================
+		//
+		// Untuk transaksi PAID:
+		// - CASH harus menerima uang minimal sebesar grand total
+		// - QRIS / Transfer / Debit / Kredit
+		//   dianggap sudah dibayar penuh
+		//
+		switch sale.PaymentMethod {
+
+		case constants.PaymentMethodCash:
 			if req.AmountReceived < sale.GrandTotal {
 				tx.Rollback()
 
 				return dto.SaleResponse{}, errors.New("amount received is less than grand total")
 			}
+
+			// simpan nominal uang yang diterima
+			sale.AmountReceived = req.AmountReceived
+
+		case constants.PaymentMethodDebit,
+			constants.PaymentMethodKredit,
+			constants.PaymentMethodQRIS,
+			constants.PaymentMethodTransfer:
+
+			// Untuk MVP:
+			// pembayaran non-cash dianggap lunas
+			sale.AmountReceived = sale.GrandTotal
+
+		default:
+			tx.Rollback()
+			return dto.SaleResponse{}, errors.New("invalid payment method")
 		}
 
-		// pembayaran cash berhasil
-		sale.PaymentStatus = constants.PaymentStatusPaid
+	case constants.PaymentStatusUnpaid:
+		// ========================================
+		// UNPAID
+		// ========================================
+		//
+		// Transaksi sudah dicatat,
+		// tetapi customer belum membayar.
+		//
+		// Tidak boleh ada amount_received.
+		//
+		if req.AmountReceived != 0 {
+			tx.Rollback()
+			return dto.SaleResponse{}, errors.New("unpaid sale cannot have amount received")
+		}
 
-	case constants.PaymentMethodQRIS,
-		constants.PaymentMethodTransfer,
-		constants.PaymentMethodDebit,
-		constants.PaymentMethodKredit:
-
-		// Untuk MVP, pembayaran dianggap sudah dikonfirmasi di kasir
-		sale.AmountReceived = sale.GrandTotal
-		sale.PaymentStatus = constants.PaymentStatusPaid
+		sale.AmountReceived = 0
 
 	default:
+		// PARTIAL, VOID, REFUNDED, atau status lain
+		// belum diperbolehkan pada proses CreateSale ini.
+
 		tx.Rollback()
 
-		return dto.SaleResponse{}, errors.New("invalid payment method")
+		return dto.SaleResponse{}, errors.New(
+			"invalid payment status for new sale",
+		)
 	}
 
-	// validasi nominal bayar jika metode pembayaran CASH
+	// update payment status
+	sale.PaymentStatus = req.PaymentStatus
 
 	err = tx.
 		WithContext(ctx).

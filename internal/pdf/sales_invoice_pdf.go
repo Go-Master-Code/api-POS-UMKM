@@ -5,20 +5,11 @@ import (
 	"fmt"
 	"umkm-odod/helper"
 	"umkm-odod/internal/model"
-
-	"github.com/go-pdf/fpdf"
+	"umkm-odod/internal/report"
 )
 
 func GenerateSalesInvoice(sale model.Sale) (*bytes.Buffer, error) {
-	pdf := fpdf.New("P", "mm", "", "")
-
-	pdf.AddPageFormat(
-		"P",
-		fpdf.SizeType{
-			Wd: 80,  // lebar 80 mm
-			Ht: 200, // walau height 200 mm, printer hanya akan print bagian kertas yang ada isi teksnya
-		},
-	)
+	pdf := report.NewReceiptPDF()
 
 	// helper lokal
 	writeAmountRow := func(label string, amount float64) {
@@ -109,12 +100,14 @@ func GenerateSalesInvoice(sale model.Sale) (*bytes.Buffer, error) {
 	pdf.CellFormat(0, 0, "", "T", 1, "", false, 0, "")
 	// pdf.Ln(2)
 
+	report.VerticalSpace2Style(pdf)
+
 	// footer tenant
 	pdf.SetFont("Arial", "", 8)
 	// untuk data berupa text dari db, pakai multicell agar go bisa mendeteksi space antar baris
 	pdf.MultiCell(0, 4, sale.Tenant.ReceiptFooter, "", "C", false)
 	//space
-	pdf.MultiCell(0, 4, fmt.Sprintf("Kritik & Saran:\n%s", sale.Tenant.Phone), "", "C", false) // untuk \n harus digunakan dengan pdf.MultiCell agar bisa ada space antar baris
+	// pdf.MultiCell(0, 4, fmt.Sprintf("Kritik & Saran:\n%s", sale.Tenant.Phone), "", "C", false) // untuk \n harus digunakan dengan pdf.MultiCell agar bisa ada space antar baris
 
 	var buf bytes.Buffer
 

@@ -71,8 +71,49 @@ func (r *saleRepository) GetAllSales(ctx context.Context, tenantID string, query
 		return nil, 0, err
 	}
 
+	/*
+		|--------------------------------------------------------------------------
+		| Sorting Whitelist
+		|--------------------------------------------------------------------------
+		|
+		| Hanya field yang terdaftar di sini yang boleh digunakan
+		| untuk sorting.
+		|
+	*/
+
+	allowedSortFields := map[string]string{
+		"invoice_number": "invoice_number",
+		"customer_name":  "customer_name",
+		"grand_total":    "grand_total",
+		"created_at":     "created_at",
+	}
+
+	// default sorting
+	sortField := "created_at"
+	sortOrder := "DESC"
+
+	// validasi sort field menggunakan whitelist
+	if field, ok := allowedSortFields[query.Sort]; ok {
+		sortField = field
+	}
+
+	// validasi sort order
+	switch query.Order {
+	case "asc":
+		sortOrder = "ASC"
+	case "desc":
+		sortOrder = "DESC"
+	}
+
 	// get data
-	err = baseQuery.Preload("Tenant").Preload("Cashier").Preload("SaleItems").Preload("SaleItems.Tenant").Preload("SaleItems.ItemVariant").Order("created_at DESC").Limit(query.Limit).Offset(offset).Find(&sales).Error
+	err = baseQuery.Preload("Tenant").
+		Preload("Cashier").
+		Preload("Customer").
+		Preload("SaleItems").
+		Preload("SaleItems.Tenant").
+		Preload("SaleItems.ItemVariant").
+		Order(sortField + " " + sortOrder).
+		Limit(query.Limit).Offset(offset).Find(&sales).Error
 	if err != nil {
 		return nil, 0, err
 	}
@@ -91,6 +132,7 @@ func (r *saleRepository) GetSaleByID(ctx context.Context, tenantID string, id st
 	err := r.db.
 		WithContext(ctx).
 		Preload("Tenant").
+		Preload("Customer").
 		Preload("Cashier").
 		Preload("SaleItems").
 		Preload("SaleItems.Tenant").      // preload nested relation dari sale item

@@ -6,6 +6,8 @@ type Sale struct {
 	ID             string     `json:"id" gorm:"type:char(36);primaryKey"`
 	TenantID       string     `json:"tenant_id" gorm:"type:char(36);not null;index;uniqueIndex:uq_sales_invoice_per_tenant"` // composite key disesuaikan dengan unique key di db
 	Tenant         Tenant     `json:"-" gorm:"foreignKey:TenantID"`
+	CustomerID     *string    `json:"customer_id" gorm:"type:char(36);index"`
+	Customer       Customer   `json:"customer,omitempty" gorm:"foreignKey:CustomerID"`
 	InvoiceNumber  string     `json:"invoice_number" gorm:"type:varchar(100);not null;uniqueIndex:uq_sales_invoice_per_tenant"` // composite key disesuaikan dengan unique key di db
 	CustomerName   string     `json:"customer_name" gorm:"type:varchar(150)"`
 	CashierID      string     `json:"cashier_id" gorm:"type:char(36);not null;index"`

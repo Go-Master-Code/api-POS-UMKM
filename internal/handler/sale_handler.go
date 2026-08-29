@@ -45,6 +45,7 @@ func (h *SaleHandler) CreateSale(c *gin.Context) {
 func (h *SaleHandler) GetAllSales(c *gin.Context) {
 	// parsing request body
 	var query dto.GetAllSalesQuery
+
 	err := c.ShouldBindQuery(&query) // bind semua query dari URL
 	if err != nil {
 		helper.ErrorParsingRequestBody(c, err)

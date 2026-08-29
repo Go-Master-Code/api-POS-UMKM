@@ -120,6 +120,11 @@ func main() {
 	supplierService := service.NewSupplierService(supplierRepo)
 	supplierHandler := handler.NewSupplierHandler(supplierService)
 
+	// dependency injection customer
+	customerRepo := repository.NewCustomerRepository(database.DB)
+	customerService := service.NewCustomerService(customerRepo)
+	customerHandler := handler.NewCustomerHandler(customerService)
+
 	// dependency injection purchase item
 	purchaseItemRepo := repository.NewPurchaseItemRepository(database.DB)
 
@@ -178,6 +183,8 @@ func main() {
 		routes.RegisterSaleRoutes(authorized, saleHandler)
 		// list handler supplier
 		routes.RegisterSupplierRoutes(authorized, supplierHandler)
+		// list handler customer
+		routes.RegisterCustomerRoutes(authorized, customerHandler)
 		// list handler purchase
 		routes.RegisterPurchaseRoutes(authorized, purchaseHandler)
 		// list handler purchase return
