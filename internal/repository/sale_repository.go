@@ -27,6 +27,7 @@ type SaleRepository interface {
 	GetAllSales(ctx context.Context, tenantID string, query dto.GetAllSalesQuery) ([]model.Sale, int64, error)
 	CreateSale(ctx context.Context, tx *gorm.DB, sale *model.Sale) error
 	GetSaleByID(ctx context.Context, tenantID string, id string) (*model.Sale, error) // perlu tenant isolation agar tenant A tidak bisa akses invoice tenant B
+	PaySale(ctx context.Context, tenantID string, saleID string, amountReceived float64) error
 }
 
 // struct implementasi
@@ -144,4 +145,14 @@ func (r *saleRepository) GetSaleByID(ctx context.Context, tenantID string, id st
 		return nil, err
 	}
 	return &sale, nil
+}
+
+func (r *saleRepository) PaySale(ctx context.Context, tenantID string, saleID string, amountReceived float64) error {
+	var updateMap = map[string]any{}
+
+	// masukkan value updateMap
+	updateMap["amount_received"] = amountReceived
+	updateMap["payment_status"] = "PAID"
+
+	return r.db.WithContext(ctx).Model(model.Sale{}).Where("id = ? AND tenant_id = ?", saleID, tenantID).Updates(updateMap).Error
 }

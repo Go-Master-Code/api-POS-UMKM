@@ -77,3 +77,25 @@ func (h *SaleHandler) GetSaleByID(c *gin.Context) {
 
 	helper.SuccessResponse(c, constants.SuccessGetData, saleDTO)
 }
+
+func (h *SaleHandler) PaySale(c *gin.Context) {
+	// ambil param saleID
+	saleID := c.Param("id")
+
+	var req dto.PaySaleRequest
+
+	// bind request body
+	err := c.ShouldBindJSON(&req)
+	if err != nil {
+		helper.ErrorParsingRequestBody(c, err)
+		return
+	}
+
+	salePaid, err := h.service.PaySale(c.Request.Context(), saleID, req.AmountReceived)
+	if err != nil {
+		helper.ErrorResponse(c, constants.ErrorUpdateData, err)
+		return
+	}
+
+	helper.SuccessResponse(c, constants.SuccessUpdateData, salePaid)
+}

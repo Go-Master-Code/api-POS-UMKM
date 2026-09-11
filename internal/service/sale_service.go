@@ -42,6 +42,7 @@ type SaleService interface {
 	GetAllSales(ctx context.Context, query dto.GetAllSalesQuery) ([]dto.SaleResponse, int64, error)
 	CreateSale(ctx context.Context, req dto.CreateSaleRequest) (dto.SaleResponse, error)
 	GetSaleByID(ctx context.Context, id string) (dto.SaleResponse, error)
+	PaySale(ctx context.Context, saleID string, amountReceived float64) (dto.SaleResponse, error)
 }
 
 // struct implementasi
@@ -244,6 +245,7 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 			VariantNameSnapshot: variant.VariantName,
 			SKUSnapshot:         variant.SKU,
 			Qty:                 item.Qty,
+			CostPrice:           variant.CostPrice,
 			UnitPrice:           variant.SellingPrice,
 			// DiscountAmount:      item.DiscountAmount,
 			DiscountAmount: 0, // sementara dibuat 0 diskon untuk setiap sale item karena diskon hanya ada di master sales
@@ -321,7 +323,8 @@ func (s *saleService) CreateSale(ctx context.Context, req dto.CreateSaleRequest)
 	// jika memang dibutuhkan.
 
 	taxableAmount := sale.Subtotal - sale.DiscountAmount
-	sale.TaxAmount = taxableAmount / 10 // skenario tax=10%
+	// sale.TaxAmount = taxableAmount / 10 // skenario tax=10%
+	sale.TaxAmount = 0 // skenario tanpa tax
 
 	// ========================================
 	// HITUNG FINAL GRAND TOTAL
@@ -476,6 +479,26 @@ func (s *saleService) GetSaleByID(ctx context.Context, id string) (dto.SaleRespo
 	tenantID := ctx.Value(constants.ContextTenantID).(string)
 	// akses repo
 	sale, err := s.saleRepo.GetSaleByID(ctx, tenantID, id)
+	if err != nil {
+		return dto.SaleResponse{}, err
+	}
+
+	// convert model to dto
+	saleDTO := helper.ConvertToDTOSaleSingle(sale)
+	return saleDTO, nil
+}
+
+func (s *saleService) PaySale(ctx context.Context, saleID string, amountReceived float64) (dto.SaleResponse, error) {
+	// ambil tenantID dari jwt
+	tenantID := ctx.Value(constants.ContextTenantID).(string)
+
+	err := s.saleRepo.PaySale(ctx, tenantID, saleID, amountReceived)
+	if err != nil {
+		return dto.SaleResponse{}, err
+	}
+
+	// get sales by id untuk reload semua relasi
+	sale, err := s.saleRepo.GetSaleByID(ctx, tenantID, saleID)
 	if err != nil {
 		return dto.SaleResponse{}, err
 	}

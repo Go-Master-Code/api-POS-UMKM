@@ -48,6 +48,12 @@ type CreateSaleItemDetailRequest struct {
 	DiscountAmount float64 `json:"discount_amount" binding:"gte=0"`
 }
 
+// PaySaleRequest digunakan untuk memproses pembayaran
+// transaksi yang sebelumnya berstatus UNPAID
+type PaySaleRequest struct {
+	AmountReceived float64 `json:"amount_received" binding:"required,gt=0"`
+}
+
 // response sale item
 type SaleItemResponse struct {
 	ID         string `json:"id"`
@@ -61,6 +67,7 @@ type SaleItemResponse struct {
 	VariantNameSnapshot string    `json:"variant_name_snapshot"`
 	SKUSnapshot         string    `json:"sku_snapshot"`
 	Qty                 float64   `json:"qty"`
+	CostPrice           float64   `json:"cost_price"`
 	UnitPrice           float64   `json:"unit_price"`
 	DiscountAmount      float64   `json:"discount_amount"`
 	Subtotal            float64   `json:"subtotal"`

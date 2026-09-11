@@ -13,8 +13,8 @@ func GenerateSalesInvoice(sale model.Sale) (*bytes.Buffer, error) {
 
 	// helper lokal
 	writeAmountRow := func(label string, amount float64) {
-		pdf.CellFormat(40, 5, label, "", 0, "L", false, 0, "")                      // print dari sisi kiri kertas
-		pdf.CellFormat(0, 5, helper.FormatRupiah(amount), "", 1, "R", false, 0, "") // print dari sisi kanan kertas
+		pdf.CellFormat(40, 5, label, "", 0, "L", false, 0, "")                            // print dari sisi kiri kertas
+		pdf.CellFormat(0, 5, "Rp "+helper.FormatRupiah(amount), "", 1, "R", false, 0, "") // print dari sisi kanan kertas
 	}
 
 	pdf.SetFont("Arial", "B", 11)
@@ -45,7 +45,19 @@ func GenerateSalesInvoice(sale model.Sale) (*bytes.Buffer, error) {
 	writeSummaryRow("Invoice", sale.InvoiceNumber)
 	writeSummaryRow("Date", sale.CreatedAt.Format("02 Jan 2006 15:04"))
 	writeSummaryRow("Cashier", sale.Cashier.FullName)
-	writeSummaryRow("Customer", sale.CustomerName)
+
+	var customer string
+	if sale.CustomerID != nil { // bandingkan nilai dengan nil karena customerID tipe nya pointer, bukan untyped string ""
+		customer = sale.Customer.Name
+	} else if sale.CustomerID == nil {
+		customer = sale.CustomerName
+		if customer == "" {
+			customer = "Walk-In Customer"
+		}
+	}
+
+	writeSummaryRow("Customer", customer)
+	writeSummaryRow("Payment", sale.PaymentMethod)
 
 	// garis pemisah
 	pdf.Ln(1)
@@ -68,11 +80,11 @@ func GenerateSalesInvoice(sale model.Sale) (*bytes.Buffer, error) {
 		leftText := fmt.Sprintf(
 			"%.0f x %s", // f artinya float, s = string
 			item.Qty,
-			helper.FormatRupiah(item.UnitPrice),
+			"Rp "+helper.FormatRupiah(item.UnitPrice),
 		)
 
 		// Subtotal per baris data
-		rightText := helper.FormatRupiah(item.Subtotal)
+		rightText := "Rp " + helper.FormatRupiah(item.Subtotal)
 
 		// cetak left text (qty * harga) di sebelah kiri, subtotal di sebelah kanan
 		pdf.CellFormat(40, 4, leftText, "", 0, "L", false, 0, "")
@@ -88,12 +100,20 @@ func GenerateSalesInvoice(sale model.Sale) (*bytes.Buffer, error) {
 
 	// summary
 	writeAmountRow("Subtotal: ", sale.Subtotal)
+
 	writeAmountRow("Discount: ", sale.DiscountAmount)
 	writeAmountRow("Tax: ", sale.TaxAmount)
 
 	// grand total
-	pdf.SetFont("Arial", "B", 10)
+	// pdf.SetFont("Arial", "B", 10) agar tulisan lebih besar dan tebal
+	pdf.SetFont("Arial", "B", 8)
 	writeAmountRow("Grand Total: ", sale.GrandTotal)
+
+	// cek jika cash maka harus tulis bayar dan kembalinya
+	if sale.PaymentMethod == "CASH" {
+		writeAmountRow("Paid: ", sale.AmountReceived)
+		writeAmountRow("Change: ", sale.AmountReceived-sale.GrandTotal)
+	}
 
 	// garis pemisah
 	pdf.Ln(1)

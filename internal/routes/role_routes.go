@@ -10,9 +10,9 @@ import (
 
 func RegisterRoleRoutes(rg *gin.RouterGroup, h *handler.RoleHandler) {
 	// endpoint roles
-	rg.GET("/roles", h.GetRoles)
+	rg.GET("/roles", h.GetRolesByTenant)
 	rg.GET("/roles/:id", h.GetRoleByID)
-	rg.POST("/roles/", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.CreateRole)
+	rg.POST("/roles", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.CreateRole)
 	rg.PUT("/roles/:id", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.UpdateRole)
 	rg.DELETE("/roles/:id", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.DeleteRole)
 }

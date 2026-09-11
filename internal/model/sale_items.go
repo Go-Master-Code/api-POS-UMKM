@@ -14,6 +14,7 @@ type SaleItem struct {
 	VariantNameSnapshot string      `json:"variant_name_snapshot" gorm:"type:varchar(150)"`
 	SKUSnapshot         string      `json:"sku_snapshot" gorm:"type:varchar(100);not null"`
 	Qty                 float64     `json:"qty" gorm:"type:decimal(18,2);not null"`
+	CostPrice           float64     `json:"cost_price" gorm:"type:decimal(18,2);not null"`
 	UnitPrice           float64     `json:"unit_price" gorm:"type:decimal(18,2);not null"`
 	DiscountAmount      float64     `json:"discount_amount" gorm:"type:decimal(18,2);not null;default:0"`
 	Subtotal            float64     `json:"subtotal" gorm:"type:decimal(18,2);not null"`

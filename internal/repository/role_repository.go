@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"umkm-odod/internal/dto"
 	"umkm-odod/internal/model"
 
 	"gorm.io/gorm"
@@ -9,7 +10,7 @@ import (
 
 // interface
 type RoleRepository interface {
-	GetRoles(ctx context.Context, tenantID string, name string) ([]model.Role, error)
+	GetRolesByTenant(ctx context.Context, tenantID string, req dto.PaginationRequest) ([]model.Role, int64, error)
 	GetRoleByID(ctx context.Context, tenantID string, id string) (*model.Role, error)
 	CreateRole(ctx context.Context, role *model.Role) error
 	UpdateRole(ctx context.Context, tenantID string, id string, updateMap map[string]any) error
@@ -29,22 +30,40 @@ func NewRoleRepository(db *gorm.DB) RoleRepository {
 }
 
 // struct method
-func (r *roleRepository) GetRoles(ctx context.Context, tenantID string, name string) ([]model.Role, error) {
+func (r *roleRepository) GetRolesByTenant(ctx context.Context, tenantID string, req dto.PaginationRequest) ([]model.Role, int64, error) {
 	var roles []model.Role
-	// query search sementara tanpa name
-	query := r.db.WithContext(ctx).Preload("Tenant").Where("tenant_id = ?", tenantID)
+	var total int64 // untuk return value total data
 
-	if name != "" {
-		query = query.Where("name LIKE ?", "%"+name+"%")
+	// query search sementara tanpa name
+	query := r.db.WithContext(ctx).Model(&model.Role{}).Preload("Tenant").Where("tenant_id = ?", tenantID)
+
+	if req.Search != "" {
+		query = query.Where("name LIKE ?", "%"+req.Search+"%")
 	}
 
-	err := query.Find(&roles).Error
+	// hitung jumlah data sebelum pagination
+	err := query.Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Sorting (sementara, nanti kita whitelist)
+	query = query.Order(req.Sort + " " + req.Order)
+
+	// Pagination
+	offset := (req.Page - 1) * req.Limit
+
+	// Limit + find data
+	err = query.
+		Offset(offset).
+		Limit(req.Limit).
+		Find(&roles).Error // sudah sekalian find data disini
 
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 
-	return roles, nil
+	return roles, total, nil
 }
 
 func (r *roleRepository) GetRoleByID(ctx context.Context, tenantID string, id string) (*model.Role, error) {

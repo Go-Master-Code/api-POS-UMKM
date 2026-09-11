@@ -524,8 +524,24 @@ func (s *reportService) ExportSalesReportPDF(ctx context.Context, query dto.Sale
 		return nil, err
 	}
 
+	// ambil username dari jwt
+	printedBy := ctx.Value(constants.ContextUsername).(string)
+
+	// ambil data tenant dulu
+	tenant, err := s.repoTenant.GetTenantByID(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// masukkan data tenant ke struct company
+	company := report.CompanyInfo{
+		Name:    tenant.Name,
+		Address: tenant.Address,
+		Phone:   tenant.Phone,
+	}
+
 	// kirim data sales sebagai datasource pdf
-	result, err := pdf.GenerateSalesReport(sales, query, summary)
+	result, err := pdf.GenerateSalesReport(sales, company, query, summary, printedBy)
 	if err != nil {
 		return nil, err
 	}

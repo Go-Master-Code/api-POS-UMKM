@@ -9,7 +9,7 @@ import (
 	"umkm-odod/internal/report"
 )
 
-func GenerateSalesReport(sales []model.Sale, query dto.SaleReportQuery, summary *dto.SalesReportSummary) (*bytes.Buffer, error) {
+func GenerateSalesReport(sales []model.Sale, company report.CompanyInfo, query dto.SaleReportQuery, summary *dto.SalesReportSummary, printedBy string) (*bytes.Buffer, error) {
 	// auto generate pdf dari method NewPDF (internal/report/pdf.go)
 	pdf := report.NewPDF()
 
@@ -18,20 +18,12 @@ func GenerateSalesReport(sales []model.Sale, query dto.SaleReportQuery, summary 
 	report.VerticalSpace2Style(pdf)
 
 	// company info
-	name := sales[0].Tenant.Name
-	address := sales[0].Tenant.Address
-	phone := sales[0].Tenant.Phone
-
-	report.DrawCompany(pdf, report.CompanyInfo{
-		Name:    name,
-		Address: address,
-		Phone:   phone,
-	})
+	report.DrawCompany(pdf, company)
 
 	report.DrawMetaData(pdf, report.Metadata{
 		StartPeriod: query.StartDate,
 		EndPeriod:   query.EndDate,
-		GeneratedBy: "example",
+		GeneratedBy: printedBy,
 	})
 
 	report.DrawSeparatorLine(pdf)
@@ -64,9 +56,9 @@ func GenerateSalesReport(sales []model.Sale, query dto.SaleReportQuery, summary 
 	}{
 		{"Invoice", 30},
 		{"Date", 25},
-		{"Customer", 25},
-		{"Cashier", 25},
-		{"Subtotal", 22},
+		{"Payment", 20},
+		{"Cashier", 28},
+		{"Subtotal", 24},
 		{"Discount", 20},
 		{"Tax", 19},
 		{"Grand Total", 24},
@@ -81,18 +73,22 @@ func GenerateSalesReport(sales []model.Sale, query dto.SaleReportQuery, summary 
 
 	// report.BodyStyle(pdf) => sudah diatur di writer
 
-	// isikan data row sales
-	for _, row := range sales {
-		report.DrawTableBody(pdf, 30, row.InvoiceNumber, "C")
-		report.DrawTableBody(pdf, 25, row.CreatedAt.Format("02 Jan 2006"), "C")
-		report.DrawTableBody(pdf, 25, row.CustomerName, "C")
-		report.DrawTableBody(pdf, 25, row.Cashier.FullName, "C")
-		report.DrawTableBody(pdf, 22, helper.FormatRupiah(row.Subtotal), "R")
-		report.DrawTableBody(pdf, 20, helper.FormatRupiah(row.DiscountAmount), "R")
-		report.DrawTableBody(pdf, 19, helper.FormatRupiah(row.TaxAmount), "R")
-		report.DrawTableBody(pdf, 24, helper.FormatRupiah(row.GrandTotal), "R")
+	// cek jumlah record sales, jika nol maka generate report kosong
+	if len(sales) == 0 {
+		report.DrawTableBody(pdf, 190, "No sales data for the selected period.", "C")
+	} else {
+		for _, row := range sales {
+			report.DrawTableBody(pdf, 30, row.InvoiceNumber, "C")
+			report.DrawTableBody(pdf, 25, row.CreatedAt.Format("02 Jan 2006"), "C")
+			report.DrawTableBody(pdf, 20, row.PaymentMethod, "C")
+			report.DrawTableBody(pdf, 28, row.Cashier.FullName, "C")
+			report.DrawTableBody(pdf, 24, helper.FormatRupiah(row.Subtotal), "R")
+			report.DrawTableBody(pdf, 20, helper.FormatRupiah(row.DiscountAmount), "R")
+			report.DrawTableBody(pdf, 19, helper.FormatRupiah(row.TaxAmount), "R")
+			report.DrawTableBody(pdf, 24, helper.FormatRupiah(row.GrandTotal), "R")
 
-		pdf.Ln(-1) // line break seperti enter
+			pdf.Ln(-1) // line break seperti enter
+		}
 	}
 
 	var buf bytes.Buffer

@@ -17,8 +17,8 @@ func GenerateToken(userID, username, roleID, role, tenantID string) (string, err
 		"role_id":   roleID,
 		"role":      role,
 		"tenant_id": tenantID,
-		"iat":       time.Now().Unix(),                    // issued at
-		"exp":       time.Now().Add(time.Hour * 1).Unix(), // harus exp bukan expired, token expired dalam 1 jam
+		"iat":       time.Now().Unix(),                     // issued at
+		"exp":       time.Now().Add(time.Hour * 12).Unix(), // harus exp bukan expired, token expired dalam 12 jam
 	})
 	return token.SignedString(secretKey)
 }

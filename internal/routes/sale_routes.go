@@ -14,4 +14,6 @@ func RegisterSaleRoutes(rg *gin.RouterGroup, h *handler.SaleHandler) {
 	// rg.GET("/sales/unpaid", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h)
 	rg.POST("/sales", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin, constants.RoleCashier), h.CreateSale)
 	rg.GET("/sales/:id", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.GetSaleByID)
+	// untuk update status paid
+	rg.POST("/sales/:id/pay", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.PaySale)
 }

@@ -22,17 +22,17 @@ func NewRoleHandler(service service.RoleService) *RoleHandler {
 }
 
 // struct method
-func (h *RoleHandler) GetRoles(c *gin.Context) {
-	// coba ambil query param name
-	name := c.Query("name")
+func (h *RoleHandler) GetRolesByTenant(c *gin.Context) {
+	// ambil pagination dari query
+	req := helper.GetPagination(c)
 
-	roles, err := h.service.GetRoles(c.Request.Context(), name)
+	roles, meta, err := h.service.GetRolesByTenant(c.Request.Context(), req)
 	if err != nil {
 		helper.ErrorResponse(c, constants.ErrorGetData, err)
 		return
 	}
 
-	helper.SuccessResponse(c, constants.SuccessGetData, roles)
+	helper.SuccessPaginationResponse(c, constants.SuccessGetData, roles, meta)
 }
 
 func (h *RoleHandler) GetRoleByID(c *gin.Context) {

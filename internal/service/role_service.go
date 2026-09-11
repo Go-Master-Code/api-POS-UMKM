@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"math"
 	"umkm-odod/helper"
 	"umkm-odod/internal/constants"
 	"umkm-odod/internal/dto"
@@ -13,7 +14,7 @@ import (
 
 // interface
 type RoleService interface {
-	GetRoles(ctx context.Context, name string) ([]dto.RoleResponse, error)
+	GetRolesByTenant(ctx context.Context, req dto.PaginationRequest) ([]dto.RoleResponse, dto.PaginationResponse, error)
 	GetRoleByID(ctx context.Context, id string) (dto.RoleResponse, error)
 	CreateRole(ctx context.Context, req dto.CreateRoleRequest) (dto.RoleResponse, error)
 	UpdateRole(ctx context.Context, id string, req dto.UpdateRoleRequest) (dto.RoleResponse, error)
@@ -33,18 +34,30 @@ func NewRoleService(repo repository.RoleRepository) RoleService {
 }
 
 // struct method
-func (s *roleService) GetRoles(ctx context.Context, name string) ([]dto.RoleResponse, error) {
+func (s *roleService) GetRolesByTenant(ctx context.Context, req dto.PaginationRequest) ([]dto.RoleResponse, dto.PaginationResponse, error) {
 	// get tenant ID from jwt
 	tenantID := ctx.Value(constants.ContextTenantID).(string)
 
-	roles, err := s.repo.GetRoles(ctx, tenantID, name)
+	roles, total, err := s.repo.GetRolesByTenant(ctx, tenantID, req)
 	if err != nil {
-		return nil, err
+		return nil, dto.PaginationResponse{}, err
 	}
 
 	// convert model to dto
 	rolesDTO := helper.ConvertToDTORolePlural(roles)
-	return rolesDTO, nil
+
+	// hitung total halaman
+	totalPages := int(math.Ceil(float64(total) / float64(req.Limit)))
+
+	// metadata pagination
+	meta := dto.PaginationResponse{
+		Page:       req.Page,
+		Limit:      req.Limit,
+		Total:      total,
+		TotalPages: totalPages,
+	}
+
+	return rolesDTO, meta, nil
 }
 
 func (s *roleService) GetRoleByID(ctx context.Context, id string) (dto.RoleResponse, error) {

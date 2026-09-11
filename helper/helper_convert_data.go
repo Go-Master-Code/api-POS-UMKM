@@ -268,6 +268,7 @@ func ConvertToDTOSaleSingle(sale *model.Sale) dto.SaleResponse {
 			VariantNameSnapshot: item.VariantNameSnapshot,
 			SKUSnapshot:         item.SKUSnapshot,
 			Qty:                 item.Qty,
+			CostPrice:           item.CostPrice,
 			UnitPrice:           item.UnitPrice,
 			DiscountAmount:      item.DiscountAmount,
 			Subtotal:            item.Subtotal,
