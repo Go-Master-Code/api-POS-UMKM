@@ -57,7 +57,28 @@ func (r *reportRepository) GetSalesReportSummary(ctx context.Context, tenantID s
 			COALESCE(SUM(subtotal),0) AS total_sales,
 			COALESCE(SUM(discount_amount),0) AS total_discount,
 			COALESCE(SUM(tax_amount),0) AS total_tax,
-			COALESCE(SUM(grand_total),0) AS grand_total
+			COALESCE(SUM(grand_total),0) AS grand_total,
+			COALESCE(
+				SUM(
+					CASE
+						WHEN payment_method = 'CASH'
+						THEN grand_total
+						ELSE 0
+					END
+				),
+				0
+			) AS total_cash,
+
+			COALESCE(
+				SUM(
+					CASE
+						WHEN payment_method = 'QRIS'
+						THEN grand_total
+						ELSE 0
+					END
+				),
+				0
+			) AS total_qris
 		`).
 		Scan(&salesReportSummary).Error
 

@@ -308,6 +308,72 @@ func ConvertToDTOSalePlural(sales []model.Sale) []dto.SaleResponse {
 	return salesDTO
 }
 
+func ConvertToDTOExpenseSingle(expense *model.Expenses) dto.ExpensesResponse {
+	// add expense items dulu untuk disisipkan pada master expense
+	var expenseItemDTO []dto.ExpenseItemResponse
+
+	for _, item := range expense.ExpenseItems {
+		expenseItemDTO = append(expenseItemDTO, dto.ExpenseItemResponse{
+			ID:                  item.ID,
+			ExpenseID:           item.ExpenseID,
+			ExpenseCategoryID:   item.ExpenseCategoryID,
+			ExpenseCategoryName: item.ExpenseCategory.Name,
+			Description:         item.Description,
+			Qty:                 item.Qty,
+			Unit:                item.Unit,
+			UnitPrice:           item.UnitPrice,
+			Subtotal:            item.Subtotal,
+			CreatedAt:           item.CreatedAt,
+		})
+	}
+
+	// masukkan juga expenseItemDTO di atas ke dalam field Items
+	expenseDTO := dto.ExpensesResponse{
+		ID:            expense.ID,
+		TenantID:      expense.TenantID,
+		TenantName:    expense.Tenant.Name,
+		TotalAmount:   expense.TotalAmount,
+		PaymentMethod: expense.PaymentMethod,
+		ExpenseNumber: expense.ExpenseNumber,
+		Notes:         expense.Notes,
+		CreatedBy:     expense.CreatedBy,
+		CreatedByUser: expense.User.Username,
+		CreatedAt:     expense.CreatedAt,
+		Items:         expenseItemDTO, // masukkan expenseItemDTO sebagai nested struct di ExpenseResponse
+	}
+
+	return expenseDTO
+}
+
+func ConvertToDTOExpensePlural(expenses []model.Expenses) []dto.ExpensesResponse {
+	var expenseDTO []dto.ExpensesResponse
+	for _, e := range expenses {
+		expenseDTO = append(expenseDTO, ConvertToDTOExpenseSingle(&e)) // method yang lebih cepat untuk for range loop plural
+	}
+	return expenseDTO
+}
+
+func ConvertToDTOExpenseCategorySingle(ec model.ExpenseCategory) dto.ExpenseCategoryResponse {
+	expenseCategory := dto.ExpenseCategoryResponse{
+		ID:          ec.ID,
+		TenantID:    ec.TenantID,
+		TenantName:  ec.Tenant.Name,
+		Name:        ec.Name,
+		Description: ec.Description,
+		IsActive:    ec.IsActive,
+	}
+	return expenseCategory
+}
+
+func ConvertTODTOExpenseCategoryPlural(ec []model.ExpenseCategory) []dto.ExpenseCategoryResponse {
+	var expenseCategories []dto.ExpenseCategoryResponse
+	for _, row := range ec {
+		expenseCategories = append(expenseCategories, ConvertToDTOExpenseCategorySingle(row))
+	}
+
+	return expenseCategories
+}
+
 func ConvertToDTOPurchaseSingle(purchase *model.Purchase) dto.PurchaseResponse {
 	// add sale items dulu untuk disisipkan pada master purchase
 	var purchaseItemDTO []dto.PurchaseItemResponse

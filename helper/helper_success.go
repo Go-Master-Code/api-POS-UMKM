@@ -26,7 +26,7 @@ type AllSuccessPagination struct {
 	Meta    dto.PaginationResponse `json:"meta"`
 }
 
-type GetAllSalesOrPurchasePerTenantSuccess struct {
+type GetAllSalesOrPurchaseOrExpensePerTenantSuccess struct {
 	Code    int    `json:"code"`
 	Message string `json:"message"`
 	Data    any    `json:"data"`
@@ -70,7 +70,7 @@ func SuccessLogin(c *gin.Context, data any, token string) {
 }
 
 func SuccessGetAllSalesPerTenant(c *gin.Context, data any, total int, page int, limit int) {
-	c.JSON(http.StatusOK, GetAllSalesOrPurchasePerTenantSuccess{
+	c.JSON(http.StatusOK, GetAllSalesOrPurchaseOrExpensePerTenantSuccess{
 		Code:    http.StatusOK,
 		Message: "success get all sales data",
 		Data:    data,
@@ -80,8 +80,19 @@ func SuccessGetAllSalesPerTenant(c *gin.Context, data any, total int, page int, 
 	})
 }
 
+func SuccessGetAllExpensesPerTenant(c *gin.Context, data any, total int, page int, limit int) {
+	c.JSON(http.StatusOK, GetAllSalesOrPurchaseOrExpensePerTenantSuccess{
+		Code:    http.StatusOK,
+		Message: "success get all expense data",
+		Data:    data,
+		Total:   total,
+		Page:    page,
+		Limit:   limit,
+	})
+}
+
 func SuccessGetAllPurchasesPerTenant(c *gin.Context, data any, total int, page int, limit int) {
-	c.JSON(http.StatusOK, GetAllSalesOrPurchasePerTenantSuccess{
+	c.JSON(http.StatusOK, GetAllSalesOrPurchaseOrExpensePerTenantSuccess{
 		Code:    http.StatusOK,
 		Message: "success get all purchases data",
 		Data:    data,
@@ -92,7 +103,7 @@ func SuccessGetAllPurchasesPerTenant(c *gin.Context, data any, total int, page i
 }
 
 func SuccessGetAllPurchaseReturnPerTenant(c *gin.Context, data any, total int, page int, limit int) {
-	c.JSON(http.StatusOK, GetAllSalesOrPurchasePerTenantSuccess{
+	c.JSON(http.StatusOK, GetAllSalesOrPurchaseOrExpensePerTenantSuccess{
 		Code:    http.StatusOK,
 		Message: "success get all purchase return data",
 		Data:    data,
@@ -103,7 +114,7 @@ func SuccessGetAllPurchaseReturnPerTenant(c *gin.Context, data any, total int, p
 }
 
 func SuccessGenerateStockReport(c *gin.Context, data any, total int, page int, limit int) {
-	c.JSON(http.StatusOK, GetAllSalesOrPurchasePerTenantSuccess{
+	c.JSON(http.StatusOK, GetAllSalesOrPurchaseOrExpensePerTenantSuccess{
 		Code:    http.StatusOK,
 		Message: "success generate stock report",
 		Data:    data,
@@ -114,7 +125,7 @@ func SuccessGenerateStockReport(c *gin.Context, data any, total int, page int, l
 }
 
 func SuccessGetAllLogsPerTenant(c *gin.Context, data any, total int, page int, limit int) {
-	c.JSON(http.StatusOK, GetAllSalesOrPurchasePerTenantSuccess{
+	c.JSON(http.StatusOK, GetAllSalesOrPurchaseOrExpensePerTenantSuccess{
 		Code:    http.StatusOK,
 		Message: "success get all activity logs",
 		Data:    data,

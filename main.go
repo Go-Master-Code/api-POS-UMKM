@@ -141,6 +141,19 @@ func main() {
 	purchaseReturnService := service.NewPurchaseReturnService(database.DB, purchaseReturnRepo, purchaseReturnItemRepo, itemVariantRepo, stockMovementRepo, activityLogService)
 	purchaseReturnHandler := handler.NewPurchaseReturnHandler(purchaseReturnService)
 
+	// dependency injection expense category
+	expenseCategoryRepo := repository.NewExpenseCategoryRepository(database.DB)
+	expenseCategoryService := service.NewExpenseCategoryService(expenseCategoryRepo)
+	expenseCaetgoryHandler := handler.NewExpenseCategoryHandler(expenseCategoryService)
+
+	// dependency injection expense item
+	expenseItemRepo := repository.NewExpenseItemRepository(database.DB)
+
+	// dependency injection expenses
+	expenseRepo := repository.NewExpenseRepository(database.DB)
+	expenseService := service.NewExpenseServie(expenseRepo, expenseItemRepo, database.DB, activityLogService)
+	expenseHandler := handler.NewExpenseHandler(expenseService)
+
 	// dependency injection dashboard
 	dashboardRepo := repository.NewDashboardRepository(database.DB)
 	dashboardService := service.NewDashboardService(dashboardRepo, stockMovementRepo, itemVariantRepo, catalogItemRepo, supplierRepo)
@@ -181,6 +194,10 @@ func main() {
 		routes.RegisterStockMovementRoutes(authorized, stockMovementHandler)
 		// list handler sales
 		routes.RegisterSaleRoutes(authorized, saleHandler)
+		// list handler expense categories
+		routes.RegisterExpenseCategoriesRoutes(authorized, expenseCaetgoryHandler)
+		// list handler expenses
+		routes.RegisterExpenseRoutes(authorized, expenseHandler)
 		// list handler supplier
 		routes.RegisterSupplierRoutes(authorized, supplierHandler)
 		// list handler customer

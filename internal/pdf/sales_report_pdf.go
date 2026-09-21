@@ -33,6 +33,8 @@ func GenerateSalesReport(sales []model.Sale, company report.CompanyInfo, query d
 	// total transaction dibuat tanpa currency Rp, jadi parameter terakhir false
 	report.DrawSummaryFeld(pdf, 35, "Total Transaction", strconv.Itoa(int(summary.TotalTransaction)), false)
 	report.DrawSummaryFeld(pdf, 35, "Total Sales", helper.FormatRupiah(summary.TotalSales), true)
+	report.DrawSummaryFeld(pdf, 35, "Total QRIS", helper.FormatRupiah(summary.TotalQRIS), true)
+	report.DrawSummaryFeld(pdf, 35, "Total Cash", helper.FormatRupiah(summary.TotalCash), true)
 	report.DrawSummaryFeld(pdf, 35, "Total Discount", helper.FormatRupiah(summary.TotalDiscount), true)
 	report.DrawSummaryFeld(pdf, 35, "Total Tax", helper.FormatRupiah(summary.TotalTax), true)
 	report.DrawSummaryFeld(pdf, 35, "Grand Total", helper.FormatRupiah(summary.GrandTotal), true)

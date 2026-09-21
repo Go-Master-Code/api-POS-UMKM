@@ -13,6 +13,8 @@ type SaleReportQuery struct {
 // summary
 type SalesReportSummary struct {
 	TotalTransaction int64   `json:"total_transaction"`
+	TotalQRIS        float64 `json:"total_qris"`
+	TotalCash        float64 `json:"total_cash"`
 	TotalSales       float64 `json:"total_sales"`
 	TotalDiscount    float64 `json:"total_discount"`
 	TotalTax         float64 `json:"total_tax"`
