@@ -8,7 +8,7 @@ import (
 	"umkm-odod/internal/report"
 )
 
-func GenerateStockReport(stock []dto.StockReportResponse, companyInfo report.CompanyInfo, query dto.StockReportQuery, summary *dto.StockReportSummary) (*bytes.Buffer, error) {
+func GenerateStockReport(stock []dto.StockReportResponse, companyInfo report.CompanyInfo, query dto.StockReportQuery, summary *dto.StockReportSummary, printedBy string) (*bytes.Buffer, error) {
 	// auto generate pdf dari method NewPDF (internal/report/pdf.go)
 	pdf := report.NewPDF()
 
@@ -28,7 +28,7 @@ func GenerateStockReport(stock []dto.StockReportResponse, companyInfo report.Com
 	})
 
 	report.DrawMetaData(pdf, report.Metadata{
-		GeneratedBy: "admin",
+		GeneratedBy: printedBy,
 	})
 
 	report.DrawSeparatorLine(pdf)
@@ -58,8 +58,8 @@ func GenerateStockReport(stock []dto.StockReportResponse, companyInfo report.Com
 	}{
 		{"SKU", 30},
 		{"Category", 30},
-		{"Item", 45},
-		{"Variant", 45},
+		{"Item", 40},
+		{"Variant", 50},
 		{"Stock", 20},
 		{"Min. Stock", 20},
 	}
@@ -74,8 +74,8 @@ func GenerateStockReport(stock []dto.StockReportResponse, companyInfo report.Com
 	for _, row := range stock {
 		report.DrawTableBody(pdf, 30, row.SKU, "C")
 		report.DrawTableBody(pdf, 30, row.CategoryName, "C")
-		report.DrawTableBody(pdf, 45, row.ItemName, "L")
-		report.DrawTableBody(pdf, 45, row.VariantName, "L")
+		report.DrawTableBody(pdf, 40, row.ItemName, "L")
+		report.DrawTableBody(pdf, 50, row.VariantName, "L")
 		report.DrawTableBody(pdf, 20, helper.FormatRupiah(row.CurrentStock), "R")
 		report.DrawTableBody(pdf, 20, helper.FormatRupiah(row.MinimumStock), "R")
 

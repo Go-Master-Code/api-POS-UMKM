@@ -26,6 +26,27 @@ type SalesReportResponse struct {
 	Transactions []SaleResponse     `json:"transactions"` // master sales berikut detail (field Items di dto SaleResponse)
 }
 
+// ================================
+// ==========EXPENSE REPORT==========
+// ================================
+type ExpenseReportQuery struct {
+	StartDate string `form:"start_date"` // untuk query parameter URL, bind c.json.shouldbindquery, harus pakai tag form, bukan json
+	EndDate   string `form:"end_date"`
+}
+
+// summary
+type ExpenseReportSummary struct {
+	TotalTransaction int64   `json:"total_transaction"`
+	TotalQRIS        float64 `json:"total_qris"`
+	TotalCash        float64 `json:"total_cash"`
+	TotalExpense     float64 `json:"total_expense"`
+}
+
+type ExpenseReportResponse struct {
+	Summary      ExpenseReportSummary `json:"summary"`
+	Transactions []ExpensesResponse   `json:"transactions"` // master expense berikut detail (field Items di dto ExpenseResponse)
+}
+
 // ===================================
 // ==========PURCHASE REPORT==========
 // ===================================

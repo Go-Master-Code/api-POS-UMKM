@@ -12,6 +12,8 @@ import (
 type ReportRepository interface {
 	GetSalesReport(ctx context.Context, tenantID string, startDate string, endDate string) ([]model.Sale, error)
 	GetSalesReportSummary(ctx context.Context, tenantID string, startDate string, endDate string) (*dto.SalesReportSummary, error)
+	GetExpenseReport(ctx context.Context, tenantID string, startDate string, endDate string) ([]model.Expenses, error)
+	GetExpenseReportSummary(ctx context.Context, tenantID string, startDate string, endDate string) (*dto.ExpenseReportSummary, error)
 	GetPurchaseReport(ctx context.Context, tenantID string, startDate string, endDate string) ([]model.Purchase, error)
 	GetPurchaseReportSummary(ctx context.Context, tenantID string, startDate string, endDate string) (*dto.PurchaseReportSummary, error)
 	GetStockReport(ctx context.Context, tenantID string, query dto.StockReportQuery) ([]dto.StockReportResponse, int64, error)
@@ -87,6 +89,61 @@ func (r *reportRepository) GetSalesReportSummary(ctx context.Context, tenantID s
 	}
 
 	return &salesReportSummary, nil
+}
+
+func (r *reportRepository) GetExpenseReport(ctx context.Context, tenantID string, startDate string, endDate string) ([]model.Expenses, error) {
+	var expenses []model.Expenses
+	err := r.db.WithContext(ctx).Model(&model.Expenses{}).
+		Preload("Tenant").
+		Preload("User").
+		Preload("ExpenseItems").
+		Preload("ExpenseItems.ExpenseCategory"). // preload nested relation dari expense item
+		Where("tenant_id = ? and DATE(created_at) BETWEEN ? AND ?", tenantID, startDate, endDate).
+		Order("created_at ASC"). // transaksi diururtkan berdasarkan waktu dibuatnya
+		Find(&expenses).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return expenses, nil
+}
+
+func (r *reportRepository) GetExpenseReportSummary(ctx context.Context, tenantID string, startDate string, endDate string) (*dto.ExpenseReportSummary, error) {
+	var expenseReportSummary dto.ExpenseReportSummary
+	err := r.db.WithContext(ctx).Model(&model.Expenses{}).
+		Where("tenant_id = ? AND DATE(created_at) BETWEEN ? AND ?", tenantID, startDate, endDate).
+		Select(`count(*) AS total_transaction,
+			COALESCE(SUM(total_amount),0) AS total_expense,
+			COALESCE(
+				SUM(
+					CASE
+						WHEN payment_method = 'CASH'
+						THEN total_amount
+						ELSE 0
+					END
+				),
+				0
+			) AS total_cash,
+
+			COALESCE(
+				SUM(
+					CASE
+						WHEN payment_method = 'QRIS'
+						THEN total_amount
+						ELSE 0
+					END
+				),
+				0
+			) AS total_qris
+		`).
+		Scan(&expenseReportSummary).Error
+
+	if err != nil {
+		return &dto.ExpenseReportSummary{}, err
+	}
+
+	return &expenseReportSummary, nil
 }
 
 func (r *reportRepository) GetPurchaseReport(ctx context.Context, tenantID string, startDate string, endDate string) ([]model.Purchase, error) {

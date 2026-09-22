@@ -26,8 +26,9 @@ type ReportService interface {
 	ExportStockReport(ctx context.Context) (*excelize.File, error)
 	// invoice -> 80 mm
 	ExportSalesInvoicePDF(ctx context.Context, saleID string) (*bytes.Buffer, error) // butuh data dari sales repo
-	// sales report, purchase report, stock report in PDF
+	// sales report, expense report, purchase report, stock report in PDF
 	ExportSalesReportPDF(ctx context.Context, query dto.SaleReportQuery) (*bytes.Buffer, error)
+	ExportExpenseReportPDF(ctx context.Context, query dto.ExpenseReportQuery) (*bytes.Buffer, error)
 	ExportPurchaseReportPDF(ctx context.Context, query dto.PurchaseReportQuery) (*bytes.Buffer, error)
 	ExportStockReportPDF(ctx context.Context) (*bytes.Buffer, error)
 	ExportStockCardPDF(ctx context.Context, itemVariantID string) (*bytes.Buffer, error)
@@ -549,6 +550,48 @@ func (s *reportService) ExportSalesReportPDF(ctx context.Context, query dto.Sale
 	return result, nil
 }
 
+func (s *reportService) ExportExpenseReportPDF(ctx context.Context, query dto.ExpenseReportQuery) (*bytes.Buffer, error) {
+	// ambil tenantID dari jwt
+	tenantID := ctx.Value(constants.ContextTenantID).(string)
+
+	// get data sales dulu, []model.Expense
+	sales, err := s.repo.GetExpenseReport(ctx, tenantID, query.StartDate, query.EndDate)
+
+	if err != nil {
+		return nil, err
+	}
+
+	// ambil data summary dari expense repo
+	summary, err := s.repo.GetExpenseReportSummary(ctx, tenantID, query.StartDate, query.EndDate)
+	if err != nil {
+		return nil, err
+	}
+
+	// ambil username dari jwt
+	printedBy := ctx.Value(constants.ContextUsername).(string)
+
+	// ambil data tenant dulu
+	tenant, err := s.repoTenant.GetTenantByID(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	// masukkan data tenant ke struct company
+	company := report.CompanyInfo{
+		Name:    tenant.Name,
+		Address: tenant.Address,
+		Phone:   tenant.Phone,
+	}
+
+	// kirim data sales sebagai datasource pdf
+	result, err := pdf.GenerateExpensesReport(sales, company, query, summary, printedBy)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
 func (s *reportService) ExportPurchaseReportPDF(ctx context.Context, query dto.PurchaseReportQuery) (*bytes.Buffer, error) {
 	// tenantID from jwt
 	tenantID := ctx.Value(constants.ContextTenantID).(string)
@@ -578,6 +621,9 @@ func (s *reportService) ExportPurchaseReportPDF(ctx context.Context, query dto.P
 func (s *reportService) ExportStockReportPDF(ctx context.Context) (*bytes.Buffer, error) {
 	// tenantID from jwt
 	tenantID := ctx.Value(constants.ContextTenantID).(string)
+
+	// ambil username dari jwt
+	printedBy := ctx.Value(constants.ContextUsername).(string)
 
 	// ambil informasi tenant sebagai parameter untuk PDF Writer
 	tenant, err := s.repoTenant.GetTenantByID(ctx, tenantID)
@@ -612,7 +658,7 @@ func (s *reportService) ExportStockReportPDF(ctx context.Context) (*bytes.Buffer
 	}
 
 	// kirim data sales sebagai datasource pdf
-	result, err := pdf.GenerateStockReport(stock, companyInfo, query, summary)
+	result, err := pdf.GenerateStockReport(stock, companyInfo, query, summary, printedBy)
 	if err != nil {
 		return nil, err
 	}

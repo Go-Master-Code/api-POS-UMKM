@@ -270,6 +270,49 @@ func (h *ReportHandler) ExportSalesReportPDF(c *gin.Context) {
 	)
 }
 
+// ===================================
+// cetak expense report pdf
+// ===================================
+func (h *ReportHandler) ExportExpensesReportPDF(c *gin.Context) {
+	// ambil dulu query URL
+	var query dto.ExpenseReportQuery
+	err := c.ShouldBindQuery(&query)
+	if err != nil {
+		helper.ErrorParsingRequestBody(c, err)
+		return
+	}
+
+	file, err := h.service.ExportExpenseReportPDF(
+		c.Request.Context(),
+		query,
+	)
+
+	if err != nil {
+		helper.ErrorGenerateReport(c, err)
+		return
+	}
+
+	// generate file name
+	fileName := fmt.Sprintf(
+		"expenses-report-%s.pdf",
+		time.Now().Format("20060102150405"), //yyyymmddhhmmss
+	)
+
+	c.Header(
+		"Content-Disposition",
+		fmt.Sprintf(
+			"attachment; filename=%s",
+			fileName,
+		),
+	)
+
+	c.Data(
+		http.StatusOK,
+		"application/pdf",
+		file.Bytes(),
+	)
+}
+
 func (h *ReportHandler) ExportPurchaseReportPDF(c *gin.Context) {
 	// ambil dulu query URL
 	var query dto.PurchaseReportQuery // isinya startdate dan enddate
