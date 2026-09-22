@@ -12,8 +12,10 @@ import (
 // interface
 type DashboardRepository interface {
 	GetTodaySales(ctx context.Context, tenantID string) (float64, int64, error)
+	GetTodayExpenses(ctx context.Context, tenantID string) (float64, int64, error)
 	GetTodayPurchases(ctx context.Context, tenantID string) (float64, int64, error)
 	GetDailySalesChart(ctx context.Context, tenantID string) ([]dto.DailySalesChartResponse, error)
+	GetDailyExpensesChart(ctx context.Context, tenantID string) ([]dto.DailyExpensesChartResponse, error)
 	GetDailyPurchaseChart(ctx context.Context, tenantID string) ([]dto.DailyPurchaseChartResponse, error)
 	GetTopSellingProducts(ctx context.Context, tenantID string) ([]dto.TopSellingProductsResponse, error)
 	GetRecentSales(ctx context.Context, tenantID string, limit int) ([]dto.RecentSalesResponse, error)
@@ -61,6 +63,35 @@ func (r *dashboardRepository) GetTodaySales(ctx context.Context, tenantID string
 	return totalSales, totalTransactions, nil
 }
 
+func (r *dashboardRepository) GetTodayExpenses(ctx context.Context, tenantID string) (float64, int64, error) {
+	var totalExpenses float64
+	var totalTransactions int64
+
+	today := time.Now().Format("2006-01-02")
+
+	// jumlahkan semua total_amount untuk mendapatkan totalExpenses
+	err := r.db.WithContext(ctx).Model(&model.Expenses{}).
+		Where("tenant_id = ? and DATE(created_at) = ?", tenantID, today).
+		Select("COALESCE(SUM(total_amount),0)").
+		Scan(&totalExpenses).Error
+
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// query untuk mencari jumlah transaksi sales yang terjadi
+	err = r.db.WithContext(ctx).Model(&model.Expenses{}).
+		Where("tenant_id = ? and DATE(created_at) = ?", tenantID, today).
+		Count(&totalTransactions).Error
+
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// jika kedua query sukses
+	return totalExpenses, totalTransactions, nil
+}
+
 func (r *dashboardRepository) GetTodayPurchases(ctx context.Context, tenantID string) (float64, int64, error) {
 	var totalPurchases float64
 	var totalPurchaseTransactions int64
@@ -105,6 +136,23 @@ func (r *dashboardRepository) GetDailySalesChart(ctx context.Context, tenantID s
 	}
 
 	return sales, nil
+}
+
+func (r *dashboardRepository) GetDailyExpensesChart(ctx context.Context, tenantID string) ([]dto.DailyExpensesChartResponse, error) {
+	var expenses []dto.DailyExpensesChartResponse
+
+	err := r.db.WithContext(ctx).Model(&model.Expenses{}).
+		Where("tenant_id = ? AND created_at > DATE_SUB(NOW(), INTERVAL 7 DAY)", tenantID).
+		Select("DATE(created_at) AS date, SUM(total_amount) AS total_expenses").
+		Group("DATE(created_at)").
+		Order("DATE(created_at)").
+		Scan(&expenses).Error // pakai scan jangan find, karena di query ini pakai model &Model.Expenses{} Karena Anda tidak sedang mengambil entity Sale, melainkan hasil agregasi custom.
+
+	if err != nil {
+		return nil, err
+	}
+
+	return expenses, nil
 }
 
 func (r *dashboardRepository) GetDailyPurchaseChart(ctx context.Context, tenantID string) ([]dto.DailyPurchaseChartResponse, error) {

@@ -11,6 +11,7 @@ import (
 type DashboardService interface {
 	GetSummary(ctx context.Context) (dto.DashBoardSummaryResponse, error)
 	GetDailySalesChart(ctx context.Context) ([]dto.DailySalesChartResponse, error)
+	GetDailyExpensesChart(ctx context.Context) ([]dto.DailyExpensesChartResponse, error)
 	GetDailyPurchaseChart(ctx context.Context) ([]dto.DailyPurchaseChartResponse, error)
 	GetTopSellingProducts(ctx context.Context) ([]dto.TopSellingProductsResponse, error)
 	GetRecentSales(ctx context.Context) ([]dto.RecentSalesResponse, error)
@@ -45,6 +46,14 @@ func (s *dashboardService) GetSummary(ctx context.Context) (dto.DashBoardSummary
 	// ==========SALES==========
 	// =========================
 	totalSales, totalTransactions, err := s.dashboardRepo.GetTodaySales(ctx, tenantID)
+	if err != nil {
+		return dto.DashBoardSummaryResponse{}, err
+	}
+
+	// =========================
+	// ==========EXPENSES==========
+	// =========================
+	totalExpenses, totalExpenseTransactions, err := s.dashboardRepo.GetTodayExpenses(ctx, tenantID)
 	if err != nil {
 		return dto.DashBoardSummaryResponse{}, err
 	}
@@ -99,15 +108,16 @@ func (s *dashboardService) GetSummary(ctx context.Context) (dto.DashBoardSummary
 	// MAPPING SEMUA HASIL QUERY KE DTO
 	// =================================
 	dashboardSummary := dto.DashBoardSummaryResponse{
-		TodaySales:        totalSales,
-		TodayTransactions: totalTransactions,
-		LowStockCount:     lowStockCount,
-		TodayPurchase:     totalPurchases,
-		// TodayProfit:              totalSales - totalPurchases, dihitung nanti
-		TodayPurchaseTransaction: totalPurchaseTransactions,
-		TotalSuppliers:           totalSuppliers,
-		TotalItems:               totalItems,
-		TotalVariants:            totalVariants,
+		TodaySales:                totalSales,
+		TodayTransactions:         totalTransactions,
+		TodayExpenses:             totalExpenses,
+		TodayExpensesTransactions: totalExpenseTransactions,
+		LowStockCount:             lowStockCount,
+		TodayPurchase:             totalPurchases,
+		TodayPurchaseTransaction:  totalPurchaseTransactions,
+		TotalSuppliers:            totalSuppliers,
+		TotalItems:                totalItems,
+		TotalVariants:             totalVariants,
 	}
 
 	return dashboardSummary, nil
@@ -123,6 +133,18 @@ func (s *dashboardService) GetDailySalesChart(ctx context.Context) ([]dto.DailyS
 	}
 
 	return dailySalesChart, nil
+}
+
+func (s *dashboardService) GetDailyExpensesChart(ctx context.Context) ([]dto.DailyExpensesChartResponse, error) {
+	// get tenantID from ctx
+	tenantID := ctx.Value(constants.ContextTenantID).(string)
+
+	dailyExpensesChart, err := s.dashboardRepo.GetDailyExpensesChart(ctx, tenantID)
+	if err != nil {
+		return nil, err
+	}
+
+	return dailyExpensesChart, nil
 }
 
 func (s *dashboardService) GetDailyPurchaseChart(ctx context.Context) ([]dto.DailyPurchaseChartResponse, error) {

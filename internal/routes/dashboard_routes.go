@@ -11,6 +11,7 @@ import (
 func RegisterDashboardRoutes(rg *gin.RouterGroup, h *handler.DashboardHandler) {
 	rg.GET("/dashboard/summary", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.GetSummary)
 	rg.GET("/dashboard/chart/sales", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.GetDailySalesChart)
+	rg.GET("/dashboard/chart/expenses", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.GetDailyExpensesChart)
 	rg.GET("/dashboard/chart/purchase", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.GetDailyPurchaseChart)
 	rg.GET("/dashboard/chart/top-selling-products", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.GetTopSellingProducts)
 	rg.GET("/dashboard/recent-sales", middleware.AuthRole(constants.RoleOwner, constants.RoleAdmin), h.GetRecentSales)

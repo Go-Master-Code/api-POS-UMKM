@@ -41,6 +41,16 @@ func (h *DashboardHandler) GetDailySalesChart(c *gin.Context) {
 	helper.SuccessResponse(c, constants.SuccessGetData, dailySalesChart)
 }
 
+func (h *DashboardHandler) GetDailyExpensesChart(c *gin.Context) {
+	dailyExpensesChart, err := h.service.GetDailyExpensesChart(c.Request.Context())
+	if err != nil {
+		helper.ErrorResponse(c, constants.ErrorGetData, err)
+		return
+	}
+
+	helper.SuccessResponse(c, constants.SuccessGetData, dailyExpensesChart)
+}
+
 func (h *DashboardHandler) GetDailyPurchaseChart(c *gin.Context) {
 	dailyPurchaseChart, err := h.service.GetDailyPurchaseChart(c.Request.Context())
 	if err != nil {

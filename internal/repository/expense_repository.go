@@ -47,9 +47,9 @@ func (r *expenseRepository) GetAllExpenses(ctx context.Context, tenantID string,
 	// search amount atau expense number
 	if query.Search != "" {
 		baseQuery = baseQuery.Where(
-			"expense_number LIKE ? OR total_amount = ?",
+			"expense_number LIKE ? OR total_amount LIKE ?",
 			"%"+query.Search+"%",
-			query.Search,
+			"%"+query.Search+"%",
 		)
 	}
 
