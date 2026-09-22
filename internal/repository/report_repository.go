@@ -39,7 +39,7 @@ func (r *reportRepository) GetSalesReport(ctx context.Context, tenantID string, 
 		Preload("SaleItems.Tenant").      // preload nested relation dari sale item
 		Preload("SaleItems.ItemVariant"). // preload nested relation dari sale item
 		Where("tenant_id = ? and DATE(created_at) BETWEEN ? AND ?", tenantID, startDate, endDate).
-		Order("created_at DESC").
+		Order("created_at ASC"). // transaksi diururtkan berdasarkan waktu dibuatnya
 		Find(&sales).Error
 
 	if err != nil {

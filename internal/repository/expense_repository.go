@@ -44,9 +44,13 @@ func (r *expenseRepository) GetAllExpenses(ctx context.Context, tenantID string,
 		baseQuery = baseQuery.Where("payment_method = ?", query.PaymentMethod)
 	}
 
-	// search amount
+	// search amount atau expense number
 	if query.Search != "" {
-		baseQuery = baseQuery.Where("total_amount = ?", query.Search)
+		baseQuery = baseQuery.Where(
+			"expense_number LIKE ? OR total_amount = ?",
+			"%"+query.Search+"%",
+			query.Search,
+		)
 	}
 
 	// count total row

@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"strings"
 	"umkm-odod/internal/dto"
 	"umkm-odod/internal/model"
 
@@ -11,6 +10,7 @@ import (
 
 // interface
 type ExpenseCategoryRepository interface {
+	GetAllExpenseCategoryPerTenant(ctx context.Context, tenantID string) ([]model.ExpenseCategory, error) // tampilkan semua data di combobox
 	GetExpenseCategory(ctx context.Context, tenantID string, req dto.PaginationRequest) ([]model.ExpenseCategory, int64, error)
 	// GetExpenseCategoryByID(ctx context.Context, tenantID string, id string) (*model.ExpenseCategory, error)
 	// CreateExpenseCategory(ctx context.Context, ec *model.ExpenseCategory) error
@@ -31,6 +31,16 @@ func NewExpenseCategoryRepository(db *gorm.DB) ExpenseCategoryRepository {
 }
 
 // struct method
+func (r *expenseCategoryRepository) GetAllExpenseCategoryPerTenant(ctx context.Context, tenantID string) ([]model.ExpenseCategory, error) {
+	var expenseCategories []model.ExpenseCategory
+	err := r.db.WithContext(ctx).Where("tenant_id = ?", tenantID).Find(&expenseCategories).Error
+	if err != nil {
+		return nil, err
+	}
+
+	return expenseCategories, nil
+}
+
 func (r *expenseCategoryRepository) GetExpenseCategory(ctx context.Context, tenantID string, req dto.PaginationRequest) ([]model.ExpenseCategory, int64, error) {
 	var ec []model.ExpenseCategory
 	var total int64
@@ -87,11 +97,8 @@ func (r *expenseCategoryRepository) GetExpenseCategory(ctx context.Context, tena
 		sortField = value
 	}
 
-	// Validasi order
-	order := "DESC"
-	if strings.ToUpper(req.Order) == "ASC" {
-		order = "ASC"
-	}
+	// order asc saja, berdasarkan abjad field "name" from A to Z
+	order := "ASC"
 
 	// Sorting dengan whitelist
 	query = query.Order(sortField + " " + order)
@@ -101,7 +108,7 @@ func (r *expenseCategoryRepository) GetExpenseCategory(ctx context.Context, tena
 
 	err = query.
 		Offset(offset).
-		Limit(req.Limit).
+		// Limit(req.Limit). untuk sekarang jangan pakai limit karena jadinya tidak akan muncul semua expense category nya pada combobox
 		Find(&ec).Error
 
 	if err != nil {
